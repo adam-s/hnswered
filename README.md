@@ -2,7 +2,7 @@
 
 Chrome side panel that notifies you of replies to your Hacker News posts and comments.
 
-<video src="docs/demo.mp4" controls autoplay loop muted playsinline width="720"></video>
+https://github.com/adam-s/hnswered/releases/download/v0.0.1/demo.mp4
 
 ## How it works
 
