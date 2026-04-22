@@ -2,7 +2,7 @@
 
 Chrome side panel that notifies you of replies to your Hacker News posts and comments.
 
-https://github.com/adam-s/hnswered/releases/download/v0.0.1/demo.mp4
+https://github.com/user-attachments/assets/a193b2e6-618d-4cc6-bb82-d54101515e44
 
 ## How it works
 
