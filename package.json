@@ -1,0 +1,28 @@
+{
+  "name": "hnswered",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Chrome extension that watches Hacker News for replies to a configured user",
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "vite build",
+    "type-check": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types --no-warnings 'tests/unit/*.test.ts'",
+    "snapshot": "node scripts/snapshot.mjs",
+    "perf-profile": "node scripts/perf-profile.mjs",
+    "impersonate": "node scripts/impersonate.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tsconfig/svelte": "^5.0.4",
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.10.0",
+    "svelte": "^5.16.0",
+    "svelte-check": "^4.1.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

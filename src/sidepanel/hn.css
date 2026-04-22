@@ -1,0 +1,445 @@
+:root {
+  --brand: #2d7d7d;
+  --hn-beige: #f6f6ef;
+  --hn-rule: #ece8d8;       /* beige-on-beige hairline between rows */
+  --hn-gray: #828282;
+  --hn-gray-soft: #9a9a9a;
+  --hn-text: #000000;
+  --hn-link: #000000;
+  --hn-read-dim: #9a9a9a;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--hn-beige);
+  color: var(--hn-text);
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 10pt;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: var(--hn-link);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ── Topbar — fact on the left, verbs on the right. Wraps gracefully on narrow panels. ── */
+.topbar {
+  background: var(--brand);
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px 10px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #000;
+  min-height: 32px;
+  flex: 0 0 auto;
+}
+/* Narrow panels wrap the verbs strip. Raise min-height so settings view doesn't shrink. */
+@media (max-width: 440px) {
+  .topbar { min-height: 46px; }
+}
+.topbar .who {
+  color: #fff;
+  font-size: 9pt;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.topbar .who strong {
+  font-weight: bold;
+}
+.topbar .who .dim {
+  color: #fff;
+  opacity: 0.7;
+}
+.topbar .verbs {
+  margin-left: auto;
+  font-size: 9pt;
+  color: #fff;
+  display: flex;
+  gap: 0;
+  align-items: center;
+  white-space: nowrap;
+}
+.topbar .verbs a,
+.topbar .verbs button {
+  color: #fff;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+.topbar .verbs a:hover,
+.topbar .verbs button:hover {
+  text-decoration: underline;
+}
+.topbar .verbs button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: none;
+}
+.topbar .verbs .dot {
+  padding: 0 6px;
+  color: #fff;
+  opacity: 0.55;
+}
+
+/* ── Sub-bar: filter tabs (all / unread / read). HN-style pipe separators, no chrome. ── */
+.subbar {
+  padding: 4px 10px 5px;
+  background: var(--hn-beige);
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  font-size: 8pt;
+  color: var(--hn-gray);
+  border-bottom: 1px solid var(--hn-rule);
+  flex: 0 0 auto;
+}
+.subbar button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--hn-gray);
+}
+.subbar button:hover { text-decoration: underline; }
+.subbar button.active {
+  color: var(--hn-text);
+  font-weight: bold;
+}
+.subbar button .count {
+  color: var(--hn-gray-soft);
+  font-weight: normal;
+  margin-left: 2px;
+}
+.subbar button.active .count { color: var(--hn-gray); }
+.subbar .sep {
+  padding: 0 6px;
+  color: var(--hn-gray-soft);
+}
+
+/* ── Body — the scroll container. Topbar + subbar stay fixed above. ── */
+.body {
+  padding: 4px 10px 12px;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* HN-style "More" link at bottom of paginated list. */
+.more {
+  padding: 10px 0 4px;
+  font-size: 9pt;
+}
+.more a {
+  color: var(--hn-text);
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+/* ── Empty state — seated near optical third, left-aligned ── */
+.empty {
+  color: var(--hn-gray);
+  padding: 16px 2px 0;
+  font-size: 10pt;
+  line-height: 1.5;
+}
+.empty a {
+  color: var(--hn-link);
+  text-decoration: underline;
+}
+
+/* ── Section heading (only when it earns its keep) ── */
+.section-label {
+  color: var(--hn-gray);
+  font-size: 7pt;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  padding: 14px 0 3px;
+  border-bottom: 1px solid var(--hn-rule);
+  margin-bottom: 6px;
+}
+
+/* ── Reply row ── */
+.reply {
+  padding: 6px 0 8px;
+  border-top: 1px solid var(--hn-rule);
+}
+.reply:first-of-type {
+  border-top: none;
+}
+/* Parent context — a quiet, italic preview of the comment or story being replied to. */
+.reply .quoted {
+  display: block;
+  font-size: 8pt;
+  color: var(--hn-gray);
+  line-height: 1.4;
+  padding: 1px 0 4px 8px;
+  margin: 0 0 5px 0;
+  border-left: 2px solid var(--hn-rule);
+  text-decoration: none;
+  font-style: italic;
+}
+.reply .quoted:hover { border-left-color: var(--hn-gray-soft); }
+.reply .quoted:hover .quote-text { text-decoration: underline; }
+.reply .quoted .quote-author {
+  color: #000;
+  font-weight: bold;
+  font-style: normal;
+  margin-right: 4px;
+}
+.reply .quoted.story .quote-text {
+  color: var(--hn-gray);
+  font-style: normal;
+}
+.reply .meta {
+  color: var(--hn-gray);
+  font-size: 7pt;
+  margin-bottom: 3px;
+}
+.reply .meta strong {
+  color: #000;
+  font-weight: bold;
+  font-size: 8pt;
+}
+.reply .meta a {
+  color: var(--hn-gray);
+}
+.reply .meta .dot {
+  padding: 0 5px;
+  color: var(--hn-gray-soft);
+}
+.reply .meta .parent a {
+  color: var(--hn-gray);
+}
+.reply .text {
+  font-size: 9pt;
+  color: var(--hn-text);
+  line-height: 1.38;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.reply .text p {
+  margin: 0 0 5px 0;
+}
+.reply .text p:last-child { margin-bottom: 0; }
+.reply .text pre {
+  font-family: monospace;
+  font-size: 9pt;
+  background: transparent;
+  white-space: pre-wrap;
+  margin: 0 0 5px 0;
+}
+.reply .text a {
+  color: var(--hn-text);
+  text-decoration: underline;
+}
+.reply .actions {
+  color: var(--hn-gray);
+  font-size: 7pt;
+  margin-top: 4px;
+}
+.reply .actions a {
+  color: var(--hn-gray);
+}
+.reply .actions button {
+  color: var(--hn-gray);
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.reply .actions button:hover,
+.reply .actions a:hover {
+  text-decoration: underline;
+}
+.reply .actions .dot {
+  padding: 0 5px;
+  color: var(--hn-gray-soft);
+}
+
+.reply.read .meta strong,
+.reply.read .text,
+.reply.read .quoted .quote-author,
+.reply.read .quoted .quote-text {
+  color: var(--hn-read-dim);
+}
+.reply.read .text a {
+  color: var(--hn-read-dim);
+}
+.reply.read .quoted {
+  border-left-color: #ece8d8;
+  opacity: 0.7;
+}
+
+/* ── Settings — prose, not a form grid. Also a scroll container. ── */
+.settings {
+  padding: 12px 10px;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+.settings .storage {
+  margin-top: 18px;
+}
+.settings .kv {
+  border-collapse: collapse;
+  font-size: 9pt;
+  margin-bottom: 10px;
+}
+.settings .kv td {
+  padding: 2px 12px 2px 0;
+  color: var(--hn-text);
+  vertical-align: top;
+}
+.settings .kv td:first-child {
+  color: var(--hn-gray);
+  font-size: 8pt;
+  padding-top: 3px;
+}
+.settings .storage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: baseline;
+}
+.settings .field {
+  margin-bottom: 12px;
+}
+.settings .field label {
+  display: block;
+  font-size: 9pt;
+  color: var(--hn-text);
+  margin-bottom: 3px;
+}
+.settings input[type="text"],
+.settings select {
+  font: inherit;
+  font-size: 10pt;
+  border: 1px solid var(--hn-gray);
+  background: #fff;
+  padding: 2px 5px;
+  color: var(--hn-text);
+  width: 100%;
+  max-width: 220px;
+}
+.settings .hint {
+  color: var(--hn-gray);
+  font-size: 8pt;
+  line-height: 1.45;
+  margin: 0 0 12px 0;
+}
+.settings .hint code {
+  font-family: monospace;
+  font-size: 8pt;
+}
+.settings button.primary {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 9pt;
+  cursor: pointer;
+  color: var(--hn-text);
+  text-decoration: underline;
+}
+.settings button.primary:hover {
+  color: var(--brand);
+}
+.settings button.primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: none;
+}
+
+.status {
+  color: var(--hn-gray);
+  font-size: 8pt;
+  padding: 6px 2px;
+}
+
+/* ── Modal — centered confirm dialog, HN aesthetic (flat, no radius, thin border) ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+.modal {
+  background: #fff;
+  border: 1px solid #000;
+  padding: 14px 16px 12px;
+  max-width: 320px;
+  width: 100%;
+  color: var(--hn-text);
+  font-family: Verdana, Geneva, sans-serif;
+}
+.modal-title {
+  font-weight: bold;
+  font-size: 10pt;
+  margin-bottom: 6px;
+}
+.modal-msg {
+  font-size: 9pt;
+  line-height: 1.45;
+  color: var(--hn-text);
+  margin-bottom: 14px;
+}
+.modal-actions {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  font-size: 9pt;
+}
+.modal-actions .link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  color: var(--hn-text);
+}
+.modal-actions .link:hover { opacity: 0.75; }
+.modal-actions .link:focus-visible {
+  outline: 1px solid var(--brand);
+  outline-offset: 2px;
+}
+.modal-actions .link.gray { color: var(--hn-gray); }
+.modal-actions .link.destructive { color: var(--brand); font-weight: bold; }
+.modal-actions .sep {
+  padding: 0 8px;
+  color: var(--hn-gray-soft);
+}
