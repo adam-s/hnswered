@@ -63,7 +63,15 @@ flowchart LR
 
 ## Install
 
-**Fastest path** — the repo ships a pre-built `dist/`. Clone, then at `chrome://extensions/` → enable **Developer mode** → **Load unpacked** → select the `dist/` folder. No Node or install step required.
+The repo ships a pre-built `dist/`. No Node or build step required.
+
+![Install guide — five steps, one composite](docs/install.png)
+
+1. Open `chrome://extensions` and enable Developer mode.
+2. A new toolbar appears. Click "Load unpacked".
+3. Choose the repository's `dist` folder, produced by `pnpm build`.
+4. Open the extensions menu and pin HNswered to the toolbar.
+5. Enter your Hacker News username. It begins watching.
 
 ## Build (only if you're changing code)
 
