@@ -1,6 +1,6 @@
 import { F as FETCH, H as HN_API, D as DEFAULT_CONFIG, B as BUCKET, R as RETENTION, a as DAY_MS, A as ALARM } from './assets/constants-tVfY01Ed.js';
 
-function log(loc, msg) {
+function log(loc, msg, data) {
   return;
 }
 function logErr(loc, msg, err) {

@@ -38,9 +38,25 @@ Three test layers, in order of speed and fidelity:
 Other:
 
 - **TypeScript imports use `.ts` extensions** (`import x from './foo.ts'`). No ts-node, no tsx. The `--experimental-strip-types` flag does NOT support TS-only constructs like parameter properties or enums — use plain field declarations.
-- **`pnpm build`** outputs to `dist/`. Vite multi-entry emits `background.js` and `sidepanel.html` + its chunked JS/CSS.
+- **`pnpm build`** outputs to `dist/`. Vite multi-entry emits `background.js` and `sidepanel.html` + its chunked JS/CSS. `dist/` is tracked in git (see [.gitignore](../.gitignore)) so a fresh clone can load the extension without a build step.
 - **`pnpm type-check`** is `tsc --noEmit`.
 - **Svelte 5 runes** throughout: `$state`, `$derived`, `$props`. Not Svelte 4 stores.
+
+## Loading the extension locally
+
+The extension is loaded as **unpacked** from `dist/`, not from a `.crx` or the Chrome Web Store:
+
+1. Open `chrome://extensions`, enable **Developer mode** (top-right toggle).
+2. Click **Load unpacked**, select the repo's `dist/` folder.
+3. The HNswered side panel becomes available from the toolbar icon.
+
+After any source edit under `src/`, the loaded extension still runs the **previously built bundle** in `dist/` — Chrome does not watch source files. To pick up changes:
+
+1. `pnpm build` (rebuilds `dist/`).
+2. `chrome://extensions` → click the **reload** icon on the HNswered card.
+3. Close and reopen the side panel so it picks up the new sidepanel bundle (the SW reload alone doesn't refresh an already-open panel).
+
+Because `dist/` is committed, a typical PR includes both the `src/` change AND the corresponding `dist/` rebuild as one commit — that way reviewers and contributors who side-load from a checkout see the change without running `pnpm build` themselves.
 
 ## Recording HN tapes
 
