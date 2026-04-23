@@ -6,6 +6,7 @@ dist/**/*.map
 .perf/
 .impersonate/
 .chaos/
+.audit/
 .DS_Store
 *.log
 .vscode/
