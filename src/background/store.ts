@@ -107,13 +107,16 @@ export function createStore(area: Area = chrome.storage.local): Store {
       const monitored = opts.orphanedIfMonitoredMissing ? await this.getMonitored() : null;
       const entries = Object.entries(current);
 
-      // Drop: (1) read replies past retention age, (2) orphaned replies (parent no longer monitored).
+      // Drop: (1) read replies past retention age, (2) orphaned READ replies whose parent
+      // is no longer monitored. Unread replies are preserved even when orphaned — they
+      // still have author/text/parentAuthor/parentExcerpt stored, so the UI can render
+      // them without the parent. Preserves the "unread is never auto-evicted" contract.
       for (const [key, r] of entries) {
         if (opts.readOlderThanMs !== undefined && r.read && now - r.discoveredAt > opts.readOlderThanMs) {
           delete current[key];
           continue;
         }
-        if (monitored && !monitored[String(r.parentItemId)]) {
+        if (monitored && r.read && !monitored[String(r.parentItemId)]) {
           delete current[key];
           continue;
         }

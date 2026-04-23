@@ -7,6 +7,8 @@ description: Launch an adversarial bug-hunting code reviewer (Opus) to find real
 
 Launches an **Opus** general-purpose agent as an adversarial code reviewer.
 
+For a different-model-family cross-check, the maintainer runs additional adversary passes (e.g., Opus 4.6, other providers) out-of-band in a separate harness. This skill stays on Opus because that's what the Agent tool resolves `"opus"` to today, and it gives the highest-depth pass of anything available through the built-in tool.
+
 ## When to invoke
 
 - User says: "red team", "bug hunt", "adversarial review", "find what's broken", "find real bugs"

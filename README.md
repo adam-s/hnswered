@@ -16,6 +16,10 @@ flowchart LR
 
 One cheap "has anything changed?" request each tick. Full items are fetched only when something actually did. Two background scans catch late replies on older posts — daily over the past week, weekly over the past year.
 
+The **refresh** button in the side panel bypasses the change-filter and re-checks every item from the last week directly. HN's `/v0/updates.json` is a narrow snapshot (≈50 items at a time), so a low-traffic post that just got its first reply can fall through the scheduled tick; refresh closes that gap at the cost of up to ~30 extra requests per click, all still rate-limited.
+
+When you first set your HN username, existing top-level comments on your recent posts are surfaced as replies on the next tick, not silently baselined away. They drain at up to 10/tick (one item at a time) until caught up.
+
 ## Choosing a poll interval
 
 Typical daily footprint against HN's API. Larger ticks trade freshness for fewer bytes.

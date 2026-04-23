@@ -35,21 +35,26 @@ test('pruneReplies drops read replies older than retention, keeps unread', async
   } finally { off(); }
 });
 
-test('pruneReplies drops orphaned replies whose parent is no longer monitored', async () => {
+test('pruneReplies drops orphaned READ replies but preserves orphaned UNREAD replies', async () => {
+  // Orphan prune drops read replies only — unread replies survive even when their
+  // parent is no longer monitored. Preserves the "unread is never auto-evicted"
+  // contract: the UI can still render an orphaned unread reply from its stored
+  // author/text/parentAuthor/parentExcerpt fields.
   const shim = createChromeShim();
   const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
     await store.upsertMonitored({ id: 10, type: 'story', submittedAt: 0, lastKids: [] });
     await store.addReplies([
-      mkReply({ id: 1, parentItemId: 10, read: false }),  // parent exists → keep
-      mkReply({ id: 2, parentItemId: 99, read: false }),  // parent missing → drop
-      mkReply({ id: 3, parentItemId: 10, read: true }),   // parent exists → keep
+      mkReply({ id: 1, parentItemId: 10, read: false }),  // parent exists, unread → keep
+      mkReply({ id: 2, parentItemId: 99, read: false }),  // parent missing, unread → KEEP (was dropped pre-fix)
+      mkReply({ id: 3, parentItemId: 10, read: true }),   // parent exists, read → keep
+      mkReply({ id: 4, parentItemId: 99, read: true }),   // parent missing, read → drop
     ]);
     const dropped = await store.pruneReplies({ orphanedIfMonitoredMissing: true });
     assert.equal(dropped, 1);
     const after = await store.getReplies();
-    assert.deepEqual(Object.keys(after).sort(), ['1', '3'].sort());
+    assert.deepEqual(Object.keys(after).sort(), ['1', '2', '3'].sort());
   } finally { off(); }
 });
 

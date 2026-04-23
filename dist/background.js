@@ -52,7 +52,9 @@ async function fetchItems(client, ids) {
     const item = await client.item(id);
     if (item) {
       results.push(item);
-      if (item.deleted || item.dead) ;
+      if (item.deleted || item.dead) {
+        log("hn-client.fetchItems", `included-dead-or-deleted id=${id} deleted=${item.deleted} dead=${item.dead}`);
+      }
     }
     await sleep(FETCH.PER_REQUEST_DELAY_MS);
   }
@@ -141,7 +143,7 @@ function createStore(area = chrome.storage.local) {
           delete current[key];
           continue;
         }
-        if (monitored && !monitored[String(r.parentItemId)]) {
+        if (monitored && r.read && !monitored[String(r.parentItemId)]) {
           delete current[key];
           continue;
         }
@@ -224,8 +226,8 @@ function toMonitored(item) {
     id: item.id,
     type: item.type,
     submittedAt: (item.time ?? Math.floor(nowMs() / 1e3)) * 1e3,
-    lastDescendants: item.descendants,
-    lastKids: [...item.kids ?? []]
+    lastDescendants: 0,
+    lastKids: []
   };
 }
 function newKidIds(prev, next) {
@@ -262,21 +264,25 @@ function filterByAge(monitored, minAgeMs, maxAgeMs, now = nowMs()) {
   return out;
 }
 async function checkOne(client, store, monitored, hnUser) {
-  log("poller.checkOne", `start id=${monitored.id} type=${monitored.type} prevKids=${JSON.stringify(monitored.lastKids)}`);
+  const ageMsNow = nowMs() - monitored.submittedAt;
+  log("poller.checkOne", `ENTER id=${monitored.id} type=${monitored.type} submittedAt=${monitored.submittedAt} ageHrs=${(ageMsNow / 36e5).toFixed(2)} hnUser=${hnUser} prevKidsCount=${(monitored.lastKids ?? []).length} prevKids=${JSON.stringify(monitored.lastKids)} prevDescendants=${monitored.lastDescendants}`);
   const current = await client.item(monitored.id);
   if (!current || current.deleted || current.dead) {
-    log("poller.checkOne", `parent-unavailable id=${monitored.id} deleted=${current?.deleted} dead=${current?.dead}`);
+    log("poller.checkOne", `parent-unavailable id=${monitored.id} current=${current === null ? "null" : JSON.stringify({ deleted: current.deleted, dead: current.dead })}`);
     return 0;
   }
+  log("poller.checkOne", `parent-fetched id=${monitored.id} by=${current.by} type=${current.type} descendants=${current.descendants} kidsCount=${(current.kids ?? []).length}`);
   const prevKids = monitored.lastKids ?? [];
   const currKids = current.kids ?? [];
   const newIds = newKidIds(prevKids, currKids);
-  log("poller.checkOne", `diff id=${monitored.id} currKids=${JSON.stringify(currKids)} new=${JSON.stringify(newIds)} descendants=${current.descendants}`);
+  log("poller.checkOne", `diff id=${monitored.id} prevCount=${prevKids.length} currCount=${currKids.length} newCount=${newIds.length} currKids=${JSON.stringify(currKids)} new=${JSON.stringify(newIds)}`);
   if (newIds.length === 0) {
     if ((current.descendants ?? 0) !== (monitored.lastDescendants ?? 0)) {
-      log("poller.checkOne", `descendants-changed id=${monitored.id} from=${monitored.lastDescendants} to=${current.descendants}`);
+      log("poller.checkOne", `descendants-only-changed id=${monitored.id} from=${monitored.lastDescendants} to=${current.descendants} (nested activity, no new direct kids)`);
       monitored.lastDescendants = current.descendants;
       await store.upsertMonitored(monitored);
+    } else {
+      log("poller.checkOne", `no-change id=${monitored.id} descendants=${current.descendants}`);
     }
     return 0;
   }
@@ -284,33 +290,51 @@ async function checkOne(client, store, monitored, hnUser) {
   if (capped.length < newIds.length) {
     log("poller.checkOne", `cap-applied id=${monitored.id} willFetch=${capped.length} leftover=${newIds.length - capped.length}`);
   }
+  log("poller.checkOne", `→ fetchItems id=${monitored.id} count=${capped.length} ids=${JSON.stringify(capped)}`);
   const newItems = await fetchItems(client, capped);
+  log("poller.checkOne", `← fetchItems id=${monitored.id} got=${newItems.length}`);
   const parentCtx = monitored.type === "story" ? { title: current.title } : { author: current.by, excerpt: excerptFrom(current.text, 140) };
+  log("poller.checkOne", `parent-ctx id=${monitored.id} ctx=${JSON.stringify(parentCtx)}`);
   const replies = [];
   const fetchedIds = /* @__PURE__ */ new Set();
   let selfSkipped = 0;
   let deadSkipped = 0;
+  const hnUserLc = hnUser.toLowerCase();
   for (const it of newItems) {
     fetchedIds.add(it.id);
-    if (it.by === hnUser) {
+    log("poller.checkOne", `consider kid=${it.id} by=${it.by} deleted=${it.deleted} dead=${it.dead} parent=${monitored.id}`);
+    if ((it.by ?? "").toLowerCase() === hnUserLc) {
       selfSkipped++;
+      log("poller.checkOne", `self-skip kid=${it.id} by=${it.by} hnUser=${hnUser}`);
       continue;
     }
     const r = toReply(it, monitored, parentCtx);
-    if (r) replies.push(r);
-    else deadSkipped++;
+    if (r) {
+      replies.push(r);
+      log("poller.checkOne", `accepted kid=${it.id} as reply by=${r.author}`);
+    } else {
+      deadSkipped++;
+      log("poller.checkOne", `dead/deleted-skip kid=${it.id} deleted=${it.deleted} dead=${it.dead}`);
+    }
   }
-  if (replies.length > 0) await store.addReplies(replies);
+  if (replies.length > 0) {
+    log("poller.checkOne", `→ addReplies id=${monitored.id} count=${replies.length}`);
+    await store.addReplies(replies);
+    log("poller.checkOne", `← addReplies id=${monitored.id} ok`);
+  }
   log("poller.checkOne", `stored id=${monitored.id} new=${replies.length} selfSkipped=${selfSkipped} deadSkipped=${deadSkipped} fetched=${fetchedIds.size}`);
   const processed = /* @__PURE__ */ new Set([...prevKids, ...fetchedIds]);
-  monitored.lastKids = currKids.filter((id) => processed.has(id));
+  const nextLastKids = currKids.filter((id) => processed.has(id));
+  log("poller.checkOne", `updating-baseline id=${monitored.id} prevKidsCount=${prevKids.length} fetchedCount=${fetchedIds.size} processedCount=${processed.size} nextLastKidsCount=${nextLastKids.length} nextLastKids=${JSON.stringify(nextLastKids)}`);
+  monitored.lastKids = nextLastKids;
   monitored.lastDescendants = current.descendants;
   await store.upsertMonitored(monitored);
+  log("poller.checkOne", `EXIT id=${monitored.id} returned=${replies.length}`);
   return replies.length;
 }
 async function syncUserSubmissions(client, store, username, opts = {}) {
   const now = nowMs();
-  log("poller.syncUser", `start user=${username} force=${!!opts.force}`);
+  log("poller.syncUser", `ENTER user=${username} force=${!!opts.force} maxNewItems=${opts.maxNewItems ?? FETCH.MAX_SYNC_ITEMS_PER_CALL}`);
   if (!opts.force) {
     const { lastUserSync } = await store.getTimestamps();
     const age = now - lastUserSync;
@@ -320,17 +344,23 @@ async function syncUserSubmissions(client, store, username, opts = {}) {
   }
   const user = await client.user(username);
   if (!user || !user.submitted) {
+    log("poller.syncUser", `no-submissions user=${username} userObj=${JSON.stringify(user)}`);
     return 0;
   }
+  log("poller.syncUser", `← client.user(${username}) id=${user.id} karma=${user.karma} submittedCount=${user.submitted.length} submitted[:10]=${JSON.stringify(user.submitted.slice(0, 10))}`);
   const existing = await store.getMonitored();
-  log("poller.syncUser", `user=${username} submissions=${user.submitted.length} existingMonitored=${Object.keys(existing).length}`);
+  log("poller.syncUser", `existingMonitored count=${Object.keys(existing).length} ids=${JSON.stringify(Object.keys(existing))}`);
   const dropThreshold = now - BUCKET.DROP_AGE_MS;
   const cap = opts.maxNewItems ?? FETCH.MAX_SYNC_ITEMS_PER_CALL;
   let added = 0;
   let fetched = 0;
   for (const id of user.submitted) {
-    if (added >= cap) break;
-    if (fetched >= cap * 2) break;
+    if (added >= cap) {
+      break;
+    }
+    if (fetched >= cap * 2) {
+      break;
+    }
     const key = String(id);
     if (existing[key]) {
       continue;
@@ -338,6 +368,7 @@ async function syncUserSubmissions(client, store, username, opts = {}) {
     const item = await client.item(id);
     fetched++;
     if (!item || !item.time) {
+      log("poller.syncUser", `skip-null-or-notime id=${id} item=${JSON.stringify(item)}`);
       continue;
     }
     const itemTime = item.time * 1e3;
@@ -346,41 +377,79 @@ async function syncUserSubmissions(client, store, username, opts = {}) {
     }
     const m = toMonitored(item);
     if (!m) {
+      log("poller.syncUser", `skip-toMonitored-rejected id=${id} type=${item.type} deleted=${item.deleted} dead=${item.dead}`);
       continue;
     }
     await store.upsertMonitored(m);
     added++;
-    log("poller.syncUser", `added id=${id} type=${m.type} ageDays=${((now - m.submittedAt) / 864e5).toFixed(2)}`);
+    log("poller.syncUser", `ADDED id=${id} type=${m.type} ageDays=${((now - m.submittedAt) / 864e5).toFixed(2)} lastKids=${JSON.stringify(m.lastKids)} lastDescendants=${m.lastDescendants} origKidsOnItem=${(item.kids ?? []).length} origDescendants=${item.descendants}`);
   }
   await store.setTimestamp("lastUserSync", now);
   return added;
 }
-async function tick(client, store) {
+async function tick(client, store, opts = {}) {
   const config = await store.getConfig();
   if (!config.hnUser) {
     return { newReplies: 0, itemsChecked: 0, skipped: true, reason: "no-user" };
   }
-  log("poller.tick", `start user=${config.hnUser}`);
+  log("poller.tick", `start user=${config.hnUser} skipIdsCount=${opts.skipIds?.size ?? 0}`);
   const updates = await client.updates();
   const monitored = await store.getMonitored();
   const userChanged = updates.profiles.includes(config.hnUser);
   const changedIds = new Set(updates.items);
+  const skipIds = opts.skipIds;
   const toCheck = [];
+  let skippedByCaller = 0;
   for (const m of Object.values(monitored)) {
-    if (changedIds.has(m.id)) toCheck.push(m);
+    if (!changedIds.has(m.id)) continue;
+    if (skipIds?.has(m.id)) {
+      skippedByCaller++;
+      continue;
+    }
+    toCheck.push(m);
   }
-  log("poller.tick", `updates itemsInFeed=${updates.items.length} profilesInFeed=${updates.profiles.length} userInProfiles=${userChanged} monitored=${Object.keys(monitored).length} toCheck=${toCheck.length} toCheckIds=${JSON.stringify(toCheck.map((m) => m.id))}`);
+  log("poller.tick", `updates itemsInFeed=${updates.items.length} profilesInFeed=${updates.profiles.length} userInProfiles=${userChanged} monitored=${Object.keys(monitored).length} toCheck=${toCheck.length} skippedByCaller=${skippedByCaller} toCheckIds=${JSON.stringify(toCheck.map((m) => m.id))}`);
   if (userChanged) {
     log("poller.tick", `user-in-profiles user=${config.hnUser} → attempting sync (cooldown-gated)`);
     await syncUserSubmissions(client, store, config.hnUser);
   }
   let total = 0;
+  const processedIds = [];
   for (const m of toCheck) {
+    processedIds.push(m.id);
     total += await checkOne(client, store, m, config.hnUser);
   }
   await store.setTimestamp("lastTick", nowMs());
   log("poller.tick", `done newReplies=${total} itemsChecked=${toCheck.length}`);
-  return { newReplies: total, itemsChecked: toCheck.length, skipped: false };
+  return { newReplies: total, itemsChecked: toCheck.length, skipped: false, processedIds };
+}
+async function checkFastBucket(client, store) {
+  const config = await store.getConfig();
+  if (!config.hnUser) {
+    log("poller.checkFastBucket", `skip reason=no-user config=${JSON.stringify(config)}`);
+    return { newReplies: 0, itemsChecked: 0, skipped: true, reason: "no-user", processedIds: [] };
+  }
+  const monitored = await store.getMonitored();
+  const now = nowMs();
+  const allIds = Object.keys(monitored);
+  log("poller.checkFastBucket", `monitored-snapshot user=${config.hnUser} totalCount=${allIds.length} ids=${JSON.stringify(allIds)}`);
+  for (const m of Object.values(monitored)) {
+    const ageH = ((now - m.submittedAt) / 36e5).toFixed(2);
+    log("poller.checkFastBucket", `item id=${m.id} type=${m.type} ageHrs=${ageH} withinFastBucket=${now - m.submittedAt < BUCKET.FAST_MAX_AGE_MS} lastKidsCount=${(m.lastKids ?? []).length}`);
+  }
+  const targets = filterByAge(monitored, 0, BUCKET.FAST_MAX_AGE_MS);
+  log("poller.checkFastBucket", `targets=${targets.length} ids=${JSON.stringify(targets.map((m) => m.id))} fastMaxAgeMs=${BUCKET.FAST_MAX_AGE_MS}`);
+  let total = 0;
+  const processedIds = [];
+  for (const m of targets) {
+    log("poller.checkFastBucket", `→ checkOne id=${m.id}`);
+    const n = await checkOne(client, store, m, config.hnUser);
+    log("poller.checkFastBucket", `← checkOne id=${m.id} newReplies=${n}`);
+    processedIds.push(m.id);
+    total += n;
+  }
+  log("poller.checkFastBucket", `EXIT newReplies=${total} itemsChecked=${targets.length} processedIds=${JSON.stringify(processedIds)}`);
+  return { newReplies: total, itemsChecked: targets.length, skipped: false, processedIds };
 }
 async function scanBucket(client, store, minAgeMs, maxAgeMs, stampKey) {
   const config = await store.getConfig();
@@ -454,11 +523,12 @@ function singleFlight(key, run) {
   if (inFlight[key]) {
     return inFlight[key];
   }
-  const p = (async () => {
+  let p;
+  p = (async () => {
     try {
       await run();
     } finally {
-      inFlight[key] = null;
+      if (inFlight[key] === p) inFlight[key] = null;
     }
   })();
   inFlight[key] = p;
@@ -481,30 +551,57 @@ async function runTick() {
 const MIN_REFRESH_INTERVAL_MS = 1e4;
 let lastForceRefreshAt = 0;
 async function runRefresh() {
-  if (inFlight.tick) {
-    try {
-      await inFlight.tick;
-    } catch {
-    }
-  }
   const now = Date.now();
-  const allowForceSync = now - lastForceRefreshAt >= MIN_REFRESH_INTERVAL_MS;
-  if (allowForceSync) lastForceRefreshAt = now;
-  return singleFlight("tick", async () => {
+  const sinceLastMs = now - lastForceRefreshAt;
+  if (sinceLastMs < MIN_REFRESH_INTERVAL_MS) {
+    await runTick();
+    return;
+  }
+  lastForceRefreshAt = now;
+  const prior = inFlight.tick;
+  let slot;
+  slot = (async () => {
     try {
-      const { hnUser } = await store.getConfig();
-      if (hnUser && allowForceSync) {
-        await syncUserSubmissions(hnClient, store, hnUser, { force: true });
+      if (prior) {
+        log("index.runRefresh", `drain prior in-flight tick before doing refresh work`);
+        try {
+          await prior;
+        } catch {
+        }
+        log("index.runRefresh", `drained prior tick ok`);
       }
-      await tick(hnClient, store);
+      const config = await store.getConfig();
+      const { hnUser } = config;
+      log("index.runRefresh", `config hnUser=${JSON.stringify(hnUser)} tickMin=${config.tickMinutes} retDays=${config.retentionDays}`);
+      const monitoredBefore = await store.getMonitored();
+      log("index.runRefresh", `pre-sync monitoredCount=${Object.keys(monitoredBefore).length} ids=${JSON.stringify(Object.keys(monitoredBefore))}`);
+      if (hnUser) {
+        log("index.runRefresh", `→ syncUserSubmissions user=${hnUser} force=true`);
+        const added = await syncUserSubmissions(hnClient, store, hnUser, { force: true });
+        log("index.runRefresh", `← syncUserSubmissions user=${hnUser} added=${added}`);
+      } else {
+        log("index.runRefresh", `skip syncUserSubmissions — no hnUser configured`);
+      }
+      const monitoredAfter = await store.getMonitored();
+      log("index.runRefresh", `post-sync monitoredCount=${Object.keys(monitoredAfter).length} ids=${JSON.stringify(Object.keys(monitoredAfter))}`);
+      log("index.runRefresh", `→ checkFastBucket`);
+      const fastRes = await checkFastBucket(hnClient, store);
+      log("index.runRefresh", `← checkFastBucket newReplies=${fastRes.newReplies} itemsChecked=${fastRes.itemsChecked} skipped=${fastRes.skipped} reason=${fastRes.reason}`);
+      const skipIds = new Set(fastRes.processedIds ?? []);
+      log("index.runRefresh", `→ tick skipIdsCount=${skipIds.size}`);
+      const tickRes = await tick(hnClient, store, { skipIds });
+      log("index.runRefresh", `← tick newReplies=${tickRes.newReplies} itemsChecked=${tickRes.itemsChecked} skipped=${tickRes.skipped} reason=${tickRes.reason}`);
+      const replies = await store.getReplies();
+      log("index.runRefresh", `final replyCount=${Object.keys(replies).length}`);
     } catch (err) {
-      logErr("index.runRefresh", `failed`, err);
       console.error("[HNswered] refresh failed:", err);
     } finally {
+      if (inFlight.tick === slot) inFlight.tick = null;
       await refreshBadge();
-      log("index.runRefresh", `exit`);
     }
-  });
+  })();
+  inFlight.tick = slot;
+  return slot;
 }
 async function runDaily() {
   return singleFlight("daily", async () => {
@@ -559,15 +656,15 @@ chrome.action.onClicked.addListener(async (tab) => {
     await chrome.sidePanel.open({ windowId: tab.windowId });
   }
 });
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  log("index.onMessage", `kind=${message.kind}`);
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  log("index.onMessage", `RECV kind=${message.kind} senderUrl=${sender?.url ?? "n/a"}`);
   const respond = (value) => sendResponse(value);
   (async () => {
     try {
       switch (message.kind) {
         case "list-replies": {
           const replies = await store.getReplies();
-          respond({ ok: true, data: Object.values(replies).sort((a, b) => b.discoveredAt - a.discoveredAt) });
+          respond({ ok: true, data: Object.values(replies).sort((a, b) => b.time - a.time) });
           return;
         }
         case "mark-read": {
@@ -594,6 +691,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             log("index.onMessage", `user-changed from=${JSON.stringify(prevUser)} to=${JSON.stringify(nextUser)} → clearPerUserState`);
             await store.clearPerUserState();
             await refreshBadge();
+            if (nextUser) {
+              log("index.onMessage", `user-changed → reset throttle + void runRefresh() for user=${nextUser}`);
+              lastForceRefreshAt = 0;
+              void runRefresh();
+            }
           }
           await ensureAlarms();
           respond({ ok: true, data: config });
@@ -689,6 +791,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             },
             alarms
           } });
+          return;
+        }
+        default: {
+          const kind = message.kind;
+          log("index.onMessage", `UNKNOWN kind=${JSON.stringify(kind)}`);
+          respond({ ok: false, error: `unknown message kind: ${String(kind)}` });
           return;
         }
       }

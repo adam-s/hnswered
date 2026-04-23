@@ -6870,13 +6870,15 @@ function Settings($$anchor, $$props) {
 		set(saving, true);
 
 		try {
+			// Backend's set-config handler kicks off runRefresh on user-change and
+			// ensures alarms are reconciled. A follow-up force-tick here would race
+			// with that kickoff and either coalesce (best case) or seize the slot
+			// and skip the force-sync work (worst case). Let the backend do its job.
 			await api.setConfig({
 				hnUser: get(hnUser).trim(),
 				tickMinutes: get(tickMinutes),
 				retentionDays: get(retentionDays)
 			});
-
-			if (get(hnUser).trim()) await api.forceTick();
 		} finally {
 			set(saving, false);
 		}
@@ -7483,4 +7485,4 @@ delegate(['click']);
 const target = document.getElementById("app");
 if (!target) throw new Error("#app not found");
 mount(App, { target });
-//# sourceMappingURL=sidepanel-C6K9E1s_.js.map
+//# sourceMappingURL=sidepanel-DXq5Ga11.js.map

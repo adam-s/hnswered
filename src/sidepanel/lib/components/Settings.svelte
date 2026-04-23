@@ -45,8 +45,11 @@
   async function performSave() {
     saving = true;
     try {
+      // Backend's set-config handler kicks off runRefresh on user-change and
+      // ensures alarms are reconciled. A follow-up force-tick here would race
+      // with that kickoff and either coalesce (best case) or seize the slot
+      // and skip the force-sync work (worst case). Let the backend do its job.
       await api.setConfig({ hnUser: hnUser.trim(), tickMinutes, retentionDays });
-      if (hnUser.trim()) await api.forceTick();
     } finally {
       saving = false;
     }
