@@ -1,0 +1,1228 @@
+{
+  "config": {
+    "hnUser": "mfiguiere",
+    "retentionDays": 30,
+    "tickMinutes": 5
+  },
+  "monitored": {
+    "47144048": {
+      "id": 47144048,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1771971306000,
+      "type": "story"
+    },
+    "47161708": {
+      "id": 47161708,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1772078782000,
+      "type": "story"
+    },
+    "47173198": {
+      "id": 47173198,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1772146167000,
+      "type": "story"
+    },
+    "47285607": {
+      "id": 47285607,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1772871110000,
+      "type": "story"
+    },
+    "47301017": {
+      "id": 47301017,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1773001346000,
+      "type": "story"
+    },
+    "47329947": {
+      "id": 47329947,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1773184329000,
+      "type": "story"
+    },
+    "47367177": {
+      "id": 47367177,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1773422607000,
+      "type": "story"
+    },
+    "47367233": {
+      "id": 47367233,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1773422898000,
+      "type": "comment"
+    },
+    "47383956": {
+      "id": 47383956,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1773544591000,
+      "type": "story"
+    },
+    "47395070": {
+      "id": 47395070,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1773633397000,
+      "type": "story"
+    },
+    "47416548": {
+      "id": 47416548,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1773773049000,
+      "type": "story"
+    },
+    "47452824": {
+      "id": 47452824,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1774003495000,
+      "type": "story"
+    },
+    "47466905": {
+      "id": 47466905,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1774100120000,
+      "type": "story"
+    },
+    "47495373": {
+      "id": 47495373,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1774301507000,
+      "type": "story"
+    },
+    "47543923": {
+      "id": 47543923,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1774625391000,
+      "type": "story"
+    },
+    "47577277": {
+      "id": 47577277,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1774892035000,
+      "type": "story"
+    },
+    "47595019": {
+      "id": 47595019,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1775001122000,
+      "type": "story"
+    },
+    "47606229": {
+      "id": 47606229,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1775075817000,
+      "type": "story"
+    },
+    "47796264": {
+      "id": 47796264,
+      "lastDescendants": 1,
+      "lastKids": [
+        47797004
+      ],
+      "submittedAt": 1776358694000,
+      "type": "story"
+    },
+    "47806021": {
+      "id": 47806021,
+      "lastDescendants": 70,
+      "lastKids": [
+        47823009,
+        47824232,
+        47823637,
+        47822413,
+        47822450,
+        47821949,
+        47822127,
+        47822089,
+        47824376,
+        47822026,
+        47822404,
+        47822211,
+        47827464,
+        47826753,
+        47823172,
+        47822612,
+        47826224,
+        47823155,
+        47823019,
+        47824320
+      ],
+      "submittedAt": 1776434247000,
+      "type": "story"
+    },
+    "47810006": {
+      "id": 47810006,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1776456416000,
+      "type": "story"
+    },
+    "47827631": {
+      "id": 47827631,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1776632631000,
+      "type": "story"
+    },
+    "47834565": {
+      "id": 47834565,
+      "lastDescendants": 377,
+      "lastKids": [
+        47836251,
+        47835603,
+        47839388,
+        47835483,
+        47834921,
+        47837133,
+        47834968,
+        47836403,
+        47842839,
+        47848684,
+        47835661,
+        47839756,
+        47838265,
+        47840827,
+        47835109,
+        47845311,
+        47837600,
+        47837378,
+        47835894,
+        47836764
+      ],
+      "submittedAt": 1776693934000,
+      "type": "story"
+    },
+    "47837599": {
+      "id": 47837599,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1776705803000,
+      "type": "story"
+    },
+    "47855093": {
+      "id": 47855093,
+      "lastDescendants": 6,
+      "lastKids": [
+        47861122,
+        47855229,
+        47856858,
+        47856784,
+        47857151
+      ],
+      "submittedAt": 1776808663000,
+      "type": "story"
+    },
+    "47863217": {
+      "id": 47863217,
+      "lastDescendants": 356,
+      "lastKids": [
+        47866085,
+        47869285,
+        47864835,
+        47865686,
+        47871917,
+        47866058,
+        47865232,
+        47868361,
+        47866642,
+        47869692,
+        47870719,
+        47864842,
+        47865577,
+        47867307,
+        47869542,
+        47868161,
+        47864883,
+        47868413,
+        47867973,
+        47869590
+      ],
+      "submittedAt": 1776863998000,
+      "type": "story"
+    },
+    "47866860": {
+      "id": 47866860,
+      "lastDescendants": 45,
+      "lastKids": [
+        47867392,
+        47871745,
+        47871835,
+        47868942,
+        47867354,
+        47870824,
+        47867718,
+        47870764,
+        47868659,
+        47869635,
+        47867446,
+        47868274,
+        47870648,
+        47871232,
+        47867493,
+        47868648,
+        47868342,
+        47869965,
+        47870656
+      ],
+      "submittedAt": 1776880027000,
+      "type": "story"
+    },
+    "47868778": {
+      "id": 47868778,
+      "lastKids": [
+        47869997
+      ],
+      "submittedAt": 1776889269000,
+      "type": "comment"
+    },
+    "47870314": {
+      "id": 47870314,
+      "lastDescendants": 18,
+      "lastKids": [
+        47870630,
+        47871210,
+        47870604,
+        47870771,
+        47870875,
+        47870485,
+        47870494
+      ],
+      "submittedAt": 1776898200000,
+      "type": "story"
+    },
+    "47871484": {
+      "id": 47871484,
+      "lastDescendants": 0,
+      "lastKids": [],
+      "submittedAt": 1776909076000,
+      "type": "story"
+    }
+  },
+  "replies": {
+    "47797004": {
+      "author": "itmitica",
+      "discoveredAt": 1776914384833,
+      "id": 47797004,
+      "parentItemId": 47796264,
+      "parentItemTitle": "Best practices for using Claude Opus 4.7 with Claude Code",
+      "read": false,
+      "text": "What a jok",
+      "time": 1776361775000
+    },
+    "47821949": {
+      "author": "ahartmetz",
+      "discoveredAt": 1776914384833,
+      "id": 47821949,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Skiplists ",
+      "time": 1776575153000
+    },
+    "47822026": {
+      "author": "mrjn",
+      "discoveredAt": 1776914384833,
+      "id": 47822026,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "skiplists ",
+      "time": 1776576610000
+    },
+    "47822089": {
+      "author": "locknitpicker",
+      "discoveredAt": 1776914384833,
+      "id": 47822089,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "FTA:<p>&gt",
+      "time": 1776577648000
+    },
+    "47822127": {
+      "author": "winwang",
+      "discoveredAt": 1776914384833,
+      "id": 47822127,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Only somew",
+      "time": 1776578493000
+    },
+    "47822211": {
+      "author": "tooltower",
+      "discoveredAt": 1776914395833,
+      "id": 47822211,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "In my pers",
+      "time": 1776579994000
+    },
+    "47822404": {
+      "author": "teiferer",
+      "discoveredAt": 1776914395833,
+      "id": 47822404,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "In the age",
+      "time": 1776582984000
+    },
+    "47822413": {
+      "author": "josephg",
+      "discoveredAt": 1776914384833,
+      "id": 47822413,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "For this p",
+      "time": 1776583079000
+    },
+    "47822450": {
+      "author": "bob1029",
+      "discoveredAt": 1776914384833,
+      "id": 47822450,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "On practic",
+      "time": 1776583683000
+    },
+    "47822612": {
+      "author": "shawn_w",
+      "discoveredAt": 1776914395833,
+      "id": 47822612,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Random acc",
+      "time": 1776586027000
+    },
+    "47823009": {
+      "author": "cremer",
+      "discoveredAt": 1776914384833,
+      "id": 47823009,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Redis sort",
+      "time": 1776591211000
+    },
+    "47823019": {
+      "author": "torben-friis",
+      "discoveredAt": 1776914395833,
+      "id": 47823019,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Could some",
+      "time": 1776591406000
+    },
+    "47823155": {
+      "author": "aaa_aaa",
+      "discoveredAt": 1776914395833,
+      "id": 47823155,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Almost not",
+      "time": 1776593432000
+    },
+    "47823172": {
+      "author": "medbar",
+      "discoveredAt": 1776914395833,
+      "id": 47823172,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Skiplist o",
+      "time": 1776593560000
+    },
+    "47823637": {
+      "author": "ozgrakkurt",
+      "discoveredAt": 1776914384833,
+      "id": 47823637,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Some more ",
+      "time": 1776599432000
+    },
+    "47824232": {
+      "author": "carlsverre",
+      "discoveredAt": 1776914384833,
+      "id": 47824232,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "(I used to",
+      "time": 1776605894000
+    },
+    "47824320": {
+      "author": "esafak",
+      "discoveredAt": 1776914395833,
+      "id": 47824320,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "What they ",
+      "time": 1776606819000
+    },
+    "47824376": {
+      "author": "torginus",
+      "discoveredAt": 1776914384833,
+      "id": 47824376,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "&gt;What a",
+      "time": 1776607341000
+    },
+    "47826224": {
+      "author": "einpoklum",
+      "discoveredAt": 1776914395833,
+      "id": 47826224,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "&gt; <i>Ev",
+      "time": 1776621651000
+    },
+    "47826753": {
+      "author": "maxtaco",
+      "discoveredAt": 1776914395833,
+      "id": 47826753,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Backpointe",
+      "time": 1776625717000
+    },
+    "47827464": {
+      "author": "talideon",
+      "discoveredAt": 1776914395833,
+      "id": 47827464,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Plenty, bu",
+      "time": 1776631194000
+    },
+    "47834921": {
+      "author": "jjice",
+      "discoveredAt": 1776914384833,
+      "id": 47834921,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "With them ",
+      "time": 1776695418000
+    },
+    "47834968": {
+      "author": "trvz",
+      "discoveredAt": 1776914384833,
+      "id": 47834968,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "The fun th",
+      "time": 1776695586000
+    },
+    "47835109": {
+      "author": "Oras",
+      "discoveredAt": 1776914395833,
+      "id": 47835109,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "I find it ",
+      "time": 1776696161000
+    },
+    "47835483": {
+      "author": "0xbadcafebee",
+      "discoveredAt": 1776914384833,
+      "id": 47835483,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Everybody&",
+      "time": 1776697896000
+    },
+    "47835603": {
+      "author": "ninjahawk1",
+      "discoveredAt": 1776914384833,
+      "id": 47835603,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "The way to",
+      "time": 1776698360000
+    },
+    "47835661": {
+      "author": "atilimcetin",
+      "discoveredAt": 1776914395833,
+      "id": 47835661,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Nowadays, ",
+      "time": 1776698595000
+    },
+    "47835894": {
+      "author": "DeathArrow",
+      "discoveredAt": 1776914395833,
+      "id": 47835894,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "I am tryin",
+      "time": 1776699498000
+    },
+    "47836251": {
+      "author": "alex7o",
+      "discoveredAt": 1776914384833,
+      "id": 47836251,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Ok I find ",
+      "time": 1776701052000
+    },
+    "47836403": {
+      "author": "wg0",
+      "discoveredAt": 1776914384833,
+      "id": 47836403,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Notice the",
+      "time": 1776701766000
+    },
+    "47836764": {
+      "author": "marsulta",
+      "discoveredAt": 1776914395833,
+      "id": 47836764,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "I think th",
+      "time": 1776702979000
+    },
+    "47837133": {
+      "author": "jdw64",
+      "discoveredAt": 1776914384833,
+      "id": 47837133,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "<a href=\"h",
+      "time": 1776704308000
+    },
+    "47837378": {
+      "author": "chatmasta",
+      "discoveredAt": 1776914395833,
+      "id": 47837378,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Is this go",
+      "time": 1776705159000
+    },
+    "47837600": {
+      "author": "XCSme",
+      "discoveredAt": 1776914395833,
+      "id": 47837600,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "A bit weir",
+      "time": 1776705805000
+    },
+    "47838265": {
+      "author": "o10449366",
+      "discoveredAt": 1776914395833,
+      "id": 47838265,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "I have the",
+      "time": 1776708449000
+    },
+    "47839388": {
+      "author": "seanw265",
+      "discoveredAt": 1776914384833,
+      "id": 47839388,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Kimi K2.6 ",
+      "time": 1776713531000
+    },
+    "47839756": {
+      "author": "fr3on",
+      "discoveredAt": 1776914395833,
+      "id": 47839756,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "The irony ",
+      "time": 1776715238000
+    },
+    "47840827": {
+      "author": "djyde",
+      "discoveredAt": 1776914395833,
+      "id": 47840827,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "I&#x27;ve ",
+      "time": 1776719528000
+    },
+    "47842839": {
+      "author": "greyskull",
+      "discoveredAt": 1776914384833,
+      "id": 47842839,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "I&#x27;ve ",
+      "time": 1776729652000
+    },
+    "47845311": {
+      "author": "johnnyApplePRNG",
+      "discoveredAt": 1776914395833,
+      "id": 47845311,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Nowhere ne",
+      "time": 1776753083000
+    },
+    "47848684": {
+      "author": "edg5000",
+      "discoveredAt": 1776914384833,
+      "id": 47848684,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Is a commu",
+      "time": 1776778824000
+    },
+    "47856784": {
+      "author": "ineedasername",
+      "discoveredAt": 1776914384833,
+      "id": 47856784,
+      "parentItemId": 47855093,
+      "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
+      "read": false,
+      "text": "<i>&gt;&qu",
+      "time": 1776816921000
+    },
+    "47856858": {
+      "author": "htrp",
+      "discoveredAt": 1776914384833,
+      "id": 47856858,
+      "parentItemId": 47855093,
+      "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
+      "read": false,
+      "text": "How is thi",
+      "time": 1776817259000
+    },
+    "47857151": {
+      "author": "xvxvx",
+      "discoveredAt": 1776914384833,
+      "id": 47857151,
+      "parentItemId": 47855093,
+      "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
+      "read": false,
+      "text": "So… the AI",
+      "time": 1776818769000
+    },
+    "47861122": {
+      "author": "lccerina",
+      "discoveredAt": 1776914384833,
+      "id": 47861122,
+      "parentItemId": 47855093,
+      "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
+      "read": false,
+      "text": "On other n",
+      "time": 1776850007000
+    },
+    "47864835": {
+      "author": "anonzzzies",
+      "discoveredAt": 1776914384833,
+      "id": 47864835,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I wish tha",
+      "time": 1776870998000
+    },
+    "47864842": {
+      "author": "vladgur",
+      "discoveredAt": 1776914395833,
+      "id": 47864842,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "This is ge",
+      "time": 1776871034000
+    },
+    "47864883": {
+      "author": "originalvichy",
+      "discoveredAt": 1776914395833,
+      "id": 47864883,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Good news!",
+      "time": 1776871173000
+    },
+    "47865232": {
+      "author": "sietsietnoac",
+      "discoveredAt": 1776914384833,
+      "id": 47865232,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Generate a",
+      "time": 1776872594000
+    },
+    "47865577": {
+      "author": "vibe42",
+      "discoveredAt": 1776914395833,
+      "id": 47865577,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Q4-Q5 quan",
+      "time": 1776873873000
+    },
+    "47865686": {
+      "author": "jameson",
+      "discoveredAt": 1776914384833,
+      "id": 47865686,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "What compe",
+      "time": 1776874431000
+    },
+    "47866058": {
+      "author": "syntaxing",
+      "discoveredAt": 1776914384833,
+      "id": 47866058,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Been using",
+      "time": 1776876326000
+    },
+    "47866085": {
+      "author": "simonw",
+      "discoveredAt": 1776914384833,
+      "id": 47866085,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "The pelica",
+      "time": 1776876409000
+    },
+    "47866642": {
+      "author": "mark_l_watson",
+      "discoveredAt": 1776914384833,
+      "id": 47866642,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I have bee",
+      "time": 1776879068000
+    },
+    "47867307": {
+      "author": "2001zhaozhao",
+      "discoveredAt": 1776914395833,
+      "id": 47867307,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I&#x27;m k",
+      "time": 1776882142000
+    },
+    "47867354": {
+      "author": "mhitza",
+      "discoveredAt": 1776914384833,
+      "id": 47867354,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "This is th",
+      "time": 1776882316000
+    },
+    "47867392": {
+      "author": "jryio",
+      "discoveredAt": 1776914384833,
+      "id": 47867392,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "Notion did",
+      "time": 1776882448000
+    },
+    "47867446": {
+      "author": "pzo",
+      "discoveredAt": 1776914395833,
+      "id": 47867446,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "I think I ",
+      "time": 1776882711000
+    },
+    "47867718": {
+      "author": "Jayakumark",
+      "discoveredAt": 1776914384833,
+      "id": 47867718,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "Looks like",
+      "time": 1776884060000
+    },
+    "47867973": {
+      "author": "docheinestages",
+      "discoveredAt": 1776914395833,
+      "id": 47867973,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Has anyone",
+      "time": 1776885306000
+    },
+    "47868161": {
+      "author": "lgessler",
+      "discoveredAt": 1776914395833,
+      "id": 47868161,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I&#x27;ll ",
+      "time": 1776886197000
+    },
+    "47868274": {
+      "author": "anthuswilliams",
+      "discoveredAt": 1776914395833,
+      "id": 47868274,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "Without co",
+      "time": 1776886761000
+    },
+    "47868342": {
+      "author": "TIPSIO",
+      "discoveredAt": 1776914395833,
+      "id": 47868342,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "Beautiful ",
+      "time": 1776887149000
+    },
+    "47868361": {
+      "author": "zkmon",
+      "discoveredAt": 1776914384833,
+      "id": 47868361,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "On llama s",
+      "time": 1776887289000
+    },
+    "47868413": {
+      "author": "navbaker",
+      "discoveredAt": 1776914395833,
+      "id": 47868413,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "TIL that o",
+      "time": 1776887507000
+    },
+    "47868648": {
+      "author": "m4rkuskk",
+      "discoveredAt": 1776914395833,
+      "id": 47868648,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "OpenAI and",
+      "time": 1776888643000
+    },
+    "47868659": {
+      "author": "dennisy",
+      "discoveredAt": 1776914384833,
+      "id": 47868659,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "I feel for",
+      "time": 1776888694000
+    },
+    "47868942": {
+      "author": "neosat",
+      "discoveredAt": 1776914384833,
+      "id": 47868942,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "Tried it t",
+      "time": 1776889977000
+    },
+    "47869285": {
+      "author": "finnjohnsen2",
+      "discoveredAt": 1776914384833,
+      "id": 47869285,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Since Gemm",
+      "time": 1776892022000
+    },
+    "47869542": {
+      "author": "mft_",
+      "discoveredAt": 1776914395833,
+      "id": 47869542,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Huh, runni",
+      "time": 1776893468000
+    },
+    "47869590": {
+      "author": "storus",
+      "discoveredAt": 1776914395833,
+      "id": 47869590,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "If this ru",
+      "time": 1776893788000
+    },
+    "47869635": {
+      "author": "brianjking",
+      "discoveredAt": 1776914384833,
+      "id": 47869635,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "So this on",
+      "time": 1776894059000
+    },
+    "47869692": {
+      "author": "datadrivenangel",
+      "discoveredAt": 1776914384833,
+      "id": 47869692,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "So far I&#",
+      "time": 1776894407000
+    },
+    "47869965": {
+      "author": "nazca",
+      "discoveredAt": 1776914395833,
+      "id": 47869965,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "Is this an",
+      "time": 1776895890000
+    },
+    "47869997": {
+      "author": "tomhow",
+      "discoveredAt": 1776914384833,
+      "id": 47869997,
+      "parentAuthor": "mfiguiere",
+      "parentExcerpt": "Wrong link",
+      "parentItemId": 47868778,
+      "read": false,
+      "text": "Thanks! we",
+      "time": 1776896090000
+    },
+    "47870485": {
+      "author": "Havoc",
+      "discoveredAt": 1776914384833,
+      "id": 47870485,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "Amazing th",
+      "time": 1776899742000
+    },
+    "47870494": {
+      "author": "FireBeyond",
+      "discoveredAt": 1776914384833,
+      "id": 47870494,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "I wonder i",
+      "time": 1776899843000
+    },
+    "47870604": {
+      "author": "dataviz1000",
+      "discoveredAt": 1776914384833,
+      "id": 47870604,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "Does this ",
+      "time": 1776900866000
+    },
+    "47870630": {
+      "author": "doener",
+      "discoveredAt": 1776914384833,
+      "id": 47870630,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "&quot;7 ye",
+      "time": 1776901007000
+    },
+    "47870648": {
+      "author": "hereme888",
+      "discoveredAt": 1776914395833,
+      "id": 47870648,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "I just wan",
+      "time": 1776901111000
+    },
+    "47870719": {
+      "author": "n8henrie",
+      "discoveredAt": 1776914395833,
+      "id": 47870719,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I&#x27;m s",
+      "time": 1776901668000
+    },
+    "47870764": {
+      "author": "throwaway2016a",
+      "discoveredAt": 1776914384833,
+      "id": 47870764,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "What am I ",
+      "time": 1776902105000
+    },
+    "47870771": {
+      "author": "qwerpy",
+      "discoveredAt": 1776914384833,
+      "id": 47870771,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "Anyone who",
+      "time": 1776902176000
+    },
+    "47870824": {
+      "author": "zenapollo",
+      "discoveredAt": 1776914384833,
+      "id": 47870824,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "I’m helpin",
+      "time": 1776902659000
+    },
+    "47870875": {
+      "author": "addyhathaway",
+      "discoveredAt": 1776914384833,
+      "id": 47870875,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "I bought a",
+      "time": 1776903061000
+    },
+    "47871210": {
+      "author": "jijojv",
+      "discoveredAt": 1776914384833,
+      "id": 47871210,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "Still don&",
+      "time": 1776906318000
+    },
+    "47871232": {
+      "author": "eieke",
+      "discoveredAt": 1776914395833,
+      "id": 47871232,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "More specu",
+      "time": 1776906498000
+    },
+    "47871745": {
+      "author": "skybrian",
+      "discoveredAt": 1776914384833,
+      "id": 47871745,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "From the a",
+      "time": 1776912059000
+    },
+    "47871835": {
+      "author": "faxuss",
+      "discoveredAt": 1776914384833,
+      "id": 47871835,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "So this on",
+      "time": 1776913149000
+    },
+    "47871917": {
+      "author": "RandyOrion",
+      "discoveredAt": 1776914384833,
+      "id": 47871917,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Thank you ",
+      "time": 1776913994000
+    }
+  },
+  "timestamps": {
+    "lastDailyScan": null,
+    "lastTick": 1776914395833,
+    "lastUserSync": 1776914395833,
+    "lastWeeklyScan": null
+  }
+}
