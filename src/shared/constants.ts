@@ -6,6 +6,16 @@ export const ALARM = {
   WEEKLY: 'hnswered:weekly-scan',
 } as const;
 
+// navigator.locks names. Same `hnswered:` prefix as alarms — keeps any future
+// devtools `navigator.locks.query()` output namespaced cleanly. Locks are
+// ephemeral (auto-released on SW termination) so renaming has no upgrade cost,
+// unlike ALARM keys.
+export const LOCK = {
+  TICK: 'hnswered:tick',
+  DAILY: 'hnswered:daily',
+  WEEKLY: 'hnswered:weekly',
+} as const;
+
 export const DEFAULT_CONFIG = {
   hnUser: '',
   tickMinutes: 5,

@@ -4,6 +4,11 @@ const ALARM = {
   DAILY: "hnswered:daily-scan",
   WEEKLY: "hnswered:weekly-scan"
 };
+const LOCK = {
+  TICK: "hnswered:tick",
+  DAILY: "hnswered:daily",
+  WEEKLY: "hnswered:weekly"
+};
 const DEFAULT_CONFIG = {
   hnUser: "",
   tickMinutes: 5,
@@ -40,5 +45,5 @@ const FETCH = {
   USER_SYNC_MIN_INTERVAL_MS: 30 * 60 * 1e3
 };
 
-export { ALARM as A, BUCKET as B, DEFAULT_CONFIG as D, FETCH as F, HN_API as H, RETENTION as R, DAY_MS as a };
-//# sourceMappingURL=constants-tVfY01Ed.js.map
+export { ALARM as A, BUCKET as B, DEFAULT_CONFIG as D, FETCH as F, HN_API as H, LOCK as L, RETENTION as R, DAY_MS as a };
+//# sourceMappingURL=constants-CC4aYNRT.js.map

@@ -1,4 +1,4 @@
-import { R as RETENTION } from './constants-tVfY01Ed.js';
+import { R as RETENTION } from './constants-CC4aYNRT.js';
 
 const DEV = false;
 
@@ -7485,4 +7485,4 @@ delegate(['click']);
 const target = document.getElementById("app");
 if (!target) throw new Error("#app not found");
 mount(App, { target });
-//# sourceMappingURL=sidepanel-DXq5Ga11.js.map
+//# sourceMappingURL=sidepanel-C-FK4Zur.js.map

@@ -23,7 +23,7 @@ Chrome MV3 extension (Svelte 5 side panel + background service worker) that watc
 - **`hnswered:` alarm-key prefix** in [src/shared/constants.ts](../src/shared/constants.ts) — stable identifier. Renaming orphans existing users' alarms.
 - **Self-reply filter** (`if (it.by === hnUser) continue`) in [src/background/poller.ts](../src/background/poller.ts) — intentional. Your own comments on your own items are silent. For manual end-to-end testing, temporarily comment it out; do not delete.
 - **`lastKids = currKids.filter(id => processed.has(id))`** in `poller.ts` `checkOne` — do NOT simplify to `lastKids = currKids`. That silently buries replies past `MAX_REPLIES_PER_CHECK`. Covered by a regression test.
-- **`singleFlight('tick', ...)` guards** in [src/background/index.ts](../src/background/index.ts) — `runRefresh` deliberately drains any in-flight tick *first* before taking the slot, so the forced user-sync isn't skipped by a concurrent alarm tick. Ordering matters.
+- **`navigator.locks` exclusivity** in [src/background/index.ts](../src/background/index.ts) — `runRefresh` acquires `LOCK.TICK` in exclusive mode (queues behind any in-flight tick); `runTick`/`runDaily`/`runWeekly` use `{ ifAvailable: true }` so peer alarm fires drop instead of pile up. Don't switch runRefresh to `ifAvailable` — a user click that lands while an alarm tick runs MUST do its sync work after, not skip silently.
 - **Force-refresh vs force-tick** — force-refresh bypasses the 30-min user-sync cooldown (user-initiated). force-tick honors it. Don't conflate in the message handler.
 
 ## Test + build conventions

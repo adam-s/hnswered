@@ -1,4 +1,4 @@
-import { ALARM, BUCKET, DEFAULT_CONFIG } from '../shared/constants.ts';
+import { ALARM, BUCKET, DEFAULT_CONFIG, LOCK } from '../shared/constants.ts';
 import type { SidepanelMessage, SidepanelResponse } from '../shared/types.ts';
 import { log, logErr } from '../shared/debug.ts';
 import { hnClient } from './hn-client.ts';
@@ -35,31 +35,34 @@ async function ensureAlarms() {
   }
 }
 
-// Single-flight guard: coalesce overlapping poll calls into one in-flight promise.
-// Keeps concurrent force-tick clicks, alarm races, and storage-onChange ripples from
-// firing multiple concurrent scans against the same store.
-const inFlight: Record<string, Promise<void> | null> = { tick: null, daily: null, weekly: null };
-
-function singleFlight(key: 'tick' | 'daily' | 'weekly', run: () => Promise<void>): Promise<void> {
-  if (inFlight[key]) {
-    log('index.singleFlight', `coalesce key=${key}`);
-    return inFlight[key]!;
-  }
-  log('index.singleFlight', `new key=${key}`);
-  let p!: Promise<void>;
-  p = (async () => {
-    try { await run(); } finally {
-      // Only clear if we're still the slot — runRefresh directly swaps itself in,
-      // and a blind null-assignment here would clobber that slot.
-      if (inFlight[key] === p) inFlight[key] = null;
-    }
-  })();
-  inFlight[key] = p;
-  return p;
-}
+// Mutual exclusion via the Web Locks API. Replaces the prior hand-rolled
+// `singleFlight` map + `runRefresh`'s drain-then-swap dance with one native
+// primitive that:
+//   - serializes work across the SW AND every open sidepanel context
+//     (singleFlight only coalesced within a single JS context);
+//   - auto-releases when the SW terminates, so a suspended-mid-tick scenario
+//     can't leak a phantom holder;
+//   - composes naturally with AbortSignal (deferred TODO #5) via options.signal.
+//
+// Two acquisition modes are used:
+//   - exclusive (default): runRefresh — user-initiated work that MUST run, even
+//     if another tick is in-flight (queues, runs after).
+//   - ifAvailable: runTick / runDaily / runWeekly — alarm-driven idempotent work
+//     that should drop on the floor if a peer is already holding the lock.
+//     Skipping a redundant tick is strictly cheaper than queueing one.
+//
+// runRefresh's spam-click throttle (lastForceRefreshAt + MIN_REFRESH_INTERVAL_MS)
+// is unchanged; it gates user-driven entry BEFORE we even ask for the lock,
+// keeping the cheap-rejection path off the lock queue entirely.
+const MIN_REFRESH_INTERVAL_MS = 10_000;
+let lastForceRefreshAt = 0;
 
 async function runTick(): Promise<void> {
-  return singleFlight('tick', async () => {
+  await navigator.locks.request(LOCK.TICK, { ifAvailable: true }, async (lock) => {
+    if (lock === null) {
+      log('index.runTick', `coalesced — lock held by peer, skipping redundant tick`);
+      return;
+    }
     log('index.runTick', `enter`);
     try {
       await tick(hnClient, store);
@@ -78,33 +81,30 @@ async function runTick(): Promise<void> {
 // (sync + fast-bucket check + tick) is throttled by a single timestamp, not just
 // the sync portion — otherwise spam-clicks burn ~165 HN requests per click via
 // checkFastBucket alone.
-const MIN_REFRESH_INTERVAL_MS = 10_000;
-let lastForceRefreshAt = 0;
-
 async function runRefresh(): Promise<void> {
   log('index.runRefresh', `ENTER`);
   const now = Date.now();
   const sinceLastMs = now - lastForceRefreshAt;
   if (sinceLastMs < MIN_REFRESH_INTERVAL_MS) {
-    log('index.runRefresh', `THROTTLED sinceLastMs=${sinceLastMs} min=${MIN_REFRESH_INTERVAL_MS} — running cheap tick only`);
-    await runTick();
+    // Throttle path: a refresh ran very recently; do NOT do more work, but DO
+    // wait for any in-flight refresh to drain so the caller (force-refresh
+    // message handler, set-config kickoff via void runRefresh) sees post-drain
+    // storage state. An empty exclusive acquisition queues behind the in-flight
+    // work and grants instantly when the lock is free — preserves the prior
+    // singleFlight-coalesce-as-synchronization behavior without burning HN calls.
+    log('index.runRefresh', `THROTTLED sinceLastMs=${sinceLastMs} min=${MIN_REFRESH_INTERVAL_MS} — draining any in-flight tick`);
+    await navigator.locks.request(LOCK.TICK, () => {});
     return;
   }
   lastForceRefreshAt = now;
 
-  // Seize the singleFlight slot SYNCHRONOUSLY — no awaits before inFlight.tick is
-  // set — so incoming alarm ticks and force-ticks coalesce into our refresh work
-  // rather than slipping past the drain-then-seize window and running alone. The
-  // prior in-flight tick (if any) is drained inside the slot.
-  const prior = inFlight.tick;
-  let slot!: Promise<void>;
-  slot = (async () => {
+  // Exclusive lock acquisition. If a tick is in flight (rare — runTick uses
+  // ifAvailable so peer ticks don't pile up, but an alarm-tick that won the
+  // race a few ms before us is still running), we queue and run after it
+  // releases. Web Locks gives us the prior `runRefresh` slot-swap's drain
+  // semantics for free: queued requests grant in FIFO order.
+  await navigator.locks.request(LOCK.TICK, async () => {
     try {
-      if (prior) {
-        log('index.runRefresh', `drain prior in-flight tick before doing refresh work`);
-        try { await prior; } catch {}
-        log('index.runRefresh', `drained prior tick ok`);
-      }
       const config = await store.getConfig();
       const { hnUser } = config;
       log('index.runRefresh', `config hnUser=${JSON.stringify(hnUser)} tickMin=${config.tickMinutes} retDays=${config.retentionDays}`);
@@ -139,21 +139,18 @@ async function runRefresh(): Promise<void> {
       logErr('index.runRefresh', `failed`, err);
       console.error('[HNswered] refresh failed:', err);
     } finally {
-      // Clear the slot BEFORE awaiting refreshBadge — otherwise a concurrent
-      // runTick call during the ~1–5ms storage RTT would coalesce into a
-      // fully-resolved promise and return without polling. singleFlight is
-      // meant to coalesce in-flight *work*, not post-work cleanup.
-      if (inFlight.tick === slot) inFlight.tick = null;
       await refreshBadge();
       log('index.runRefresh', `EXIT`);
     }
-  })();
-  inFlight.tick = slot;
-  return slot;
+  });
 }
 
 async function runDaily(): Promise<void> {
-  return singleFlight('daily', async () => {
+  await navigator.locks.request(LOCK.DAILY, { ifAvailable: true }, async (lock) => {
+    if (lock === null) {
+      log('index.runDaily', `coalesced — lock held by peer, skipping redundant scan`);
+      return;
+    }
     log('index.runDaily', `enter`);
     try {
       await scanBucket(hnClient, store, BUCKET.DAILY_MIN_AGE_MS, BUCKET.DAILY_MAX_AGE_MS, 'lastDailyScan');
@@ -168,7 +165,11 @@ async function runDaily(): Promise<void> {
 }
 
 async function runWeekly(): Promise<void> {
-  return singleFlight('weekly', async () => {
+  await navigator.locks.request(LOCK.WEEKLY, { ifAvailable: true }, async (lock) => {
+    if (lock === null) {
+      log('index.runWeekly', `coalesced — lock held by peer, skipping redundant scan`);
+      return;
+    }
     log('index.runWeekly', `enter`);
     try {
       await scanBucket(hnClient, store, BUCKET.WEEKLY_MIN_AGE_MS, BUCKET.WEEKLY_MAX_AGE_MS, 'lastWeeklyScan');

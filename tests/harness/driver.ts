@@ -31,6 +31,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createChromeShim, installChromeShim, type ChromeShim } from '../shim/chrome.ts';
+import { createNavigatorLocksShim, installNavigatorLocksShim } from '../shim/navigator-locks.ts';
 import { installTapeClock, type TapeClock } from './clock.ts';
 import { installFetchTransport, type Tape, type TransportHandle, emptyTape } from './transport.ts';
 import { expectGolden } from './snapshot.ts';
@@ -131,6 +132,12 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
   const shim: ChromeShim = createChromeShim({ clockSource: tapeClock.now });
   const uninstallShim = installChromeShim(shim);
 
+  // Step 2.5: navigator.locks shim — production uses Web Locks for tick/refresh
+  // serialization; Node has no navigator.locks. Single-process queueing only;
+  // the real API serializes across SW + every open sidepanel, but the harness
+  // drives one context at a time so per-name promise chaining is enough.
+  const uninstallLocks = installNavigatorLocksShim(createNavigatorLocksShim());
+
   // Step 3: fetch transport.
   let transport: TransportHandle;
   if (opts.mode === 'replay') {
@@ -212,9 +219,11 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
         // clock advance past an alarm boundary may read stale state.
         //
         // Workaround for scenarios that need to observe alarm-triggered work:
-        // after `clock.tickAsync`, await `bg.runTick()` — singleFlight will
-        // coalesce with the in-flight alarm-driven tick and resolve only when
-        // that work completes.
+        // after `clock.tickAsync`, await `bg.runRefresh()` (NOT runTick — runTick
+        // uses navigator.locks `ifAvailable: true` and skips when an alarm-driven
+        // tick is in flight). runRefresh acquires the lock exclusively and
+        // therefore queues behind the in-flight tick, resolving only after it
+        // completes. The throttle stamp keeps the refresh's own work cheap.
         await new Promise((r) => setImmediate(r));
         await shim.clock.pumpAlarms();
         await new Promise((r) => setImmediate(r));
@@ -227,6 +236,7 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
     mode: opts.mode,
     async uninstall() {
       transport.uninstall();
+      uninstallLocks();
       uninstallShim();
       tapeClock.uninstall();
       // Clear __hnswered so the single-driver-per-process check at the top of

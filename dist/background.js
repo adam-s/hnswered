@@ -1,4 +1,4 @@
-import { F as FETCH, H as HN_API, D as DEFAULT_CONFIG, B as BUCKET, R as RETENTION, a as DAY_MS, A as ALARM } from './assets/constants-tVfY01Ed.js';
+import { F as FETCH, H as HN_API, D as DEFAULT_CONFIG, B as BUCKET, R as RETENTION, a as DAY_MS, A as ALARM, L as LOCK } from './assets/constants-CC4aYNRT.js';
 
 function log(loc, msg, data) {
   return;
@@ -518,58 +518,33 @@ async function ensureAlarms() {
     await chrome.alarms.create(ALARM.WEEKLY, { periodInMinutes: 7 * 24 * 60, delayInMinutes: 24 * 60 });
   }
 }
-const inFlight = { tick: null, daily: null, weekly: null };
-function singleFlight(key, run) {
-  if (inFlight[key]) {
-    return inFlight[key];
-  }
-  let p;
-  p = (async () => {
-    try {
-      await run();
-    } finally {
-      if (inFlight[key] === p) inFlight[key] = null;
-    }
-  })();
-  inFlight[key] = p;
-  return p;
-}
+const MIN_REFRESH_INTERVAL_MS = 1e4;
+let lastForceRefreshAt = 0;
 async function runTick() {
-  return singleFlight("tick", async () => {
-    log("index.runTick", `enter`);
+  await navigator.locks.request(LOCK.TICK, { ifAvailable: true }, async (lock) => {
+    if (lock === null) {
+      return;
+    }
     try {
       await tick(hnClient, store);
     } catch (err) {
-      logErr("index.runTick", `failed`, err);
       console.error("[HNswered] tick failed:", err);
     } finally {
       await refreshBadge();
-      log("index.runTick", `exit`);
     }
   });
 }
-const MIN_REFRESH_INTERVAL_MS = 1e4;
-let lastForceRefreshAt = 0;
 async function runRefresh() {
   const now = Date.now();
   const sinceLastMs = now - lastForceRefreshAt;
   if (sinceLastMs < MIN_REFRESH_INTERVAL_MS) {
-    await runTick();
+    await navigator.locks.request(LOCK.TICK, () => {
+    });
     return;
   }
   lastForceRefreshAt = now;
-  const prior = inFlight.tick;
-  let slot;
-  slot = (async () => {
+  await navigator.locks.request(LOCK.TICK, async () => {
     try {
-      if (prior) {
-        log("index.runRefresh", `drain prior in-flight tick before doing refresh work`);
-        try {
-          await prior;
-        } catch {
-        }
-        log("index.runRefresh", `drained prior tick ok`);
-      }
       const config = await store.getConfig();
       const { hnUser } = config;
       log("index.runRefresh", `config hnUser=${JSON.stringify(hnUser)} tickMin=${config.tickMinutes} retDays=${config.retentionDays}`);
@@ -596,38 +571,35 @@ async function runRefresh() {
     } catch (err) {
       console.error("[HNswered] refresh failed:", err);
     } finally {
-      if (inFlight.tick === slot) inFlight.tick = null;
       await refreshBadge();
     }
-  })();
-  inFlight.tick = slot;
-  return slot;
+  });
 }
 async function runDaily() {
-  return singleFlight("daily", async () => {
-    log("index.runDaily", `enter`);
+  await navigator.locks.request(LOCK.DAILY, { ifAvailable: true }, async (lock) => {
+    if (lock === null) {
+      return;
+    }
     try {
       await scanBucket(hnClient, store, BUCKET.DAILY_MIN_AGE_MS, BUCKET.DAILY_MAX_AGE_MS, "lastDailyScan");
     } catch (err) {
-      logErr("index.runDaily", `failed`, err);
       console.error("[HNswered] daily scan failed:", err);
     } finally {
       await refreshBadge();
-      log("index.runDaily", `exit`);
     }
   });
 }
 async function runWeekly() {
-  return singleFlight("weekly", async () => {
-    log("index.runWeekly", `enter`);
+  await navigator.locks.request(LOCK.WEEKLY, { ifAvailable: true }, async (lock) => {
+    if (lock === null) {
+      return;
+    }
     try {
       await scanBucket(hnClient, store, BUCKET.WEEKLY_MIN_AGE_MS, BUCKET.WEEKLY_MAX_AGE_MS, "lastWeeklyScan");
     } catch (err) {
-      logErr("index.runWeekly", `failed`, err);
       console.error("[HNswered] weekly scan failed:", err);
     } finally {
       await refreshBadge();
-      log("index.runWeekly", `exit`);
     }
   });
 }
