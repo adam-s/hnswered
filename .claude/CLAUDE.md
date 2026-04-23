@@ -32,7 +32,8 @@ Three test layers, in order of speed and fidelity:
 
 1. **Unit tests** — `pnpm test`. `node --test --experimental-strip-types` over `tests/unit/*.test.ts`. Hand-crafted fixtures via `tests/shim/{chrome,fake-hn}.ts`. ~2s. Pure logic.
 2. **Harness scenarios** — `pnpm harness:replay`. Drives the unmodified background module against a committed HN tape under a pinned `Date.now()`. Deterministic, offline. ~5s. Goldens at `tests/harness/golden/<scenario>/<step>.json`. See "Recording HN tapes" below.
-3. **Live integration** — `pnpm impersonate` (Playwright + real Chromium + live HN, budget-bounded). `--demo=N` seeds top stories with empty baselines to prove the detection pipeline. Budget-bounded one-shot — never loop. Other `scripts/*.mjs` harnesses (`snapshot.mjs`, `perf-profile.mjs`) follow the same `--label`, `--key=value`, JSON-summary-plus-PNGs convention.
+3. **Live integration** — `pnpm impersonate` (Playwright + real Chromium + live HN, budget-bounded, single-user sequential). `--demo=N` seeds top stories with empty baselines to prove the detection pipeline. Budget-bounded one-shot — never loop. Other `scripts/*.mjs` harnesses (`snapshot.mjs`, `perf-profile.mjs`, `chaos.mjs`) follow the same `--label`, `--key=value`, JSON-summary convention.
+4. **Live audit** — `node scripts/audit.mjs` + `node scripts/audit-analyze.mjs`, invoked via the [audit skill](skills/audit/SKILL.md). Multi-user, parallel, time-series snapshots over a bounded window (default 60min, 4 users), then deterministic divergence analysis against live HN ground truth. Same politeness rules as impersonate; the skill enforces caps on duration, budget, and user count. See [.claude/skills/audit/SKILL.md](skills/audit/SKILL.md) for invocation patterns.
 
 Other:
 
@@ -84,14 +85,18 @@ The CLI does NOT author workflow files — write `.yml` by hand and commit. Afte
 
 ## Skills
 
-Invoked via the `Agent` tool with `subagent_type: "general-purpose"` and `model: "opus"`. Each skill has a `SKILL.md` with a prompt template; fill the bracketed sections with real project context before invoking.
+Two patterns:
 
-For cross-model adversary diversity the maintainer runs additional passes (Opus 4.6, other providers) out-of-band in a separate harness — the built-in `Agent` tool doesn't support version pinning, so the skills stay on current Opus for depth.
+1. **Skill-as-prompt-template** — invoked via the `Agent` tool with `subagent_type: "general-purpose"` and `model: "opus"`. SKILL.md body is a template that Claude fills with project context.
+2. **Skill-as-shell-orchestrator** — invoked via Bash. SKILL.md body documents how to call existing scripts with sane defaults and enforced caps.
 
-- **[red-team-review](skills/red-team-review/SKILL.md)** — adversarial bug hunt. Use at checkpoints during long features, after substantial surface-area changes, or before release.
-- **[design-critique](skills/design-critique/SKILL.md)** — Jony-Ive-persona UI critique inside the aesthetic constraint above.
+For cross-model adversary diversity, the maintainer runs additional passes (Opus 4.6, other providers) out-of-band in a separate harness — the built-in `Agent` tool doesn't support version pinning.
 
-Both are read-only. See each SKILL.md for cleanup discipline.
+- **[red-team-review](skills/red-team-review/SKILL.md)** — adversarial bug hunt (prompt-template). Use at checkpoints during long features, after substantial surface-area changes, or before release.
+- **[design-critique](skills/design-critique/SKILL.md)** — Jony-Ive-persona UI critique inside the aesthetic constraint above (prompt-template).
+- **[audit](skills/audit/SKILL.md)** — bounded live multi-user audit + deterministic divergence analysis (shell-orchestrator). Hard caps enforced: never run unbounded.
+
+All three are read-only against production code. See each SKILL.md for cleanup discipline. For skill/hook/agent/settings format conventions, see [.claude/reference/anthropic-conventions.md](reference/anthropic-conventions.md).
 
 ## Known deferred red-team findings
 
