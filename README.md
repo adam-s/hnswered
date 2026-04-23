@@ -69,13 +69,7 @@ flowchart LR
 
 The repo ships a pre-built `dist/`. No Node or build step required.
 
-![Install guide — five steps, one composite](docs/install.png)
-
-1. Open `chrome://extensions` and enable Developer mode.
-2. A new toolbar appears. Click "Load unpacked".
-3. Choose the repository's `dist` folder, produced by `pnpm build`.
-4. Open the extensions menu and pin HNswered to the toolbar.
-5. Enter your Hacker News username. It begins watching.
+![Five steps to install HNswered: 1. Open chrome://extensions and enable Developer mode. 2. Click "Load unpacked" in the new toolbar. 3. Choose the repository's dist folder, produced by pnpm build. 4. Open the extensions menu and pin HNswered to the toolbar. 5. Enter your Hacker News username — watching starts immediately.](docs/install.png)
 
 ## Build (only if you're changing code)
 
