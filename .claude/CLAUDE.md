@@ -39,6 +39,8 @@ Chrome MV3 extension (Svelte 5 side panel + background service worker) that watc
 
 Invoked via the `Agent` tool with `subagent_type: "general-purpose"` and `model: "opus"`. Each skill has a `SKILL.md` with a prompt template; fill the bracketed sections with real project context before invoking.
 
+For cross-model adversary diversity the maintainer runs additional passes (Opus 4.6, other providers) out-of-band in a separate harness — the built-in `Agent` tool doesn't support version pinning, so the skills stay on current Opus for depth.
+
 - **[red-team-review](skills/red-team-review/SKILL.md)** — adversarial bug hunt. Use at checkpoints during long features, after substantial surface-area changes, or before release.
 - **[design-critique](skills/design-critique/SKILL.md)** — Jony-Ive-persona UI critique inside the aesthetic constraint above.
 
@@ -48,11 +50,14 @@ Both are read-only. See each SKILL.md for cleanup discipline.
 
 Tradeoffs we chose, not oversights:
 
-- **No CAS on `chrome.storage.local` read-modify-write.** Concurrent ticks + UI writes can clobber each other. Mitigated by `singleFlight`, not eliminated. A per-key lock is the real fix if this ever bites in production.
-- **`lastUserSync` is written on forced syncs too.** An alarm tick shortly after a force-refresh will skip its sync. Intentional: cooldown measures work done, not intent.
-- **Sidepanel refreshes on every `storage.local` change** including `lastTick`. Message/CPU churn, not a request storm. Worth debouncing eventually.
+- **No CAS on `chrome.storage.local` read-modify-write.** Concurrent ticks + UI writes can clobber each other. Mitigated by `singleFlight`, not eliminated. A per-key lock is the real fix if this ever bites in production. Window is now ~10× wider since `checkFastBucket` can hold the slot for 8+ seconds per refresh click.
+- **`lastUserSync` is written on forced syncs too.** An alarm tick shortly after a force-refresh will skip its sync. Intentional: cooldown measures work done, not intent. UX sharper now that `toMonitored` baselines empty — delayed syncs mean in-flight conversations go un-surfaced for up to 30 min.
+- **Sidepanel refreshes on every `storage.local` change** including `lastTick`. Message/CPU churn, not a request storm. Amplified by `checkFastBucket` which can fire up to 15 `replies` writes per refresh.
 - **No per-scan overall request budget.** Individual caps bound worst case; nothing aborts mid-scan if HN is slow and retries compound.
 - **`__hnswered` global ships in the production bundle.** SW scope only, not web-reachable. Removing requires Vite build-mode flags — not worth it for MVP.
+- **`lastForceRefreshAt` does not survive SW suspension.** A spam-clicker who triggers MV3 suspension between clicks bypasses the 10s refresh throttle. Would need a persistent stamp in `chrome.storage.local` to close.
+- **`stoppedAtAge` in `syncUserSubmissions` trusts HN's newest-first ordering of `user.submitted`.** Not a documented contract. If HN ever reordered, we'd stop prematurely and silently miss recent items.
+- **`DEBUG = true` in `src/shared/debug.ts`.** Production builds are verbose. Flip when shipping.
 
 ## Noise to ignore
 

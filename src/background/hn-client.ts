@@ -62,9 +62,12 @@ export async function fetchItems(
   for (const id of ids) {
     const item = await client.item(id);
     if (item) {
+      // Include dead/deleted items in results unconditionally — callers
+      // (checkOne via toReply) filter them out, but they need the item to
+      // advance baselines correctly. The log just records the condition.
       results.push(item);
       if (item.deleted || item.dead) {
-        log('hn-client.fetchItems', `skipped-deleted id=${id}`);
+        log('hn-client.fetchItems', `included-dead-or-deleted id=${id} deleted=${item.deleted} dead=${item.dead}`);
       }
     } else {
       log('hn-client.fetchItems', `null id=${id}`);

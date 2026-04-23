@@ -5,6 +5,7 @@ import { createChromeShim, installChromeShim } from '../shim/chrome.ts';
 import { createFakeHN } from '../shim/fake-hn.ts';
 import { createStore } from '../../src/background/store.ts';
 import {
+  checkFastBucket,
   filterByAge,
   newKidIds,
   scanBucket,
@@ -22,14 +23,14 @@ test('newKidIds returns only ids not previously seen', () => {
   assert.deepEqual(newKidIds([1, 2], [1, 2]), []);
 });
 
-test('toMonitored rejects deleted, dead, and wrong-type items', () => {
+test('toMonitored rejects deleted, dead, and wrong-type items; baselines empty so existing kids are surfaced', () => {
   assert.equal(toMonitored({ id: 1, type: 'story', deleted: true } as any), null);
   assert.equal(toMonitored({ id: 1, type: 'story', dead: true } as any), null);
   assert.equal(toMonitored({ id: 1, type: 'job' } as any), null);
   const m = toMonitored({ id: 1, type: 'story', time: 100, kids: [2, 3], descendants: 5 } as any);
   assert.equal(m?.id, 1);
-  assert.deepEqual(m?.lastKids, [2, 3]);
-  assert.equal(m?.lastDescendants, 5);
+  assert.deepEqual(m?.lastKids, [], 'baseline empty, not snapshotted — next checkOne surfaces existing kids as new');
+  assert.equal(m?.lastDescendants, 0);
 });
 
 test('toReply skips deleted/dead and missing author', () => {
@@ -265,6 +266,230 @@ test('syncUserSubmissions pulls items newer than 1yr and stops at older ones', a
     assert.ok(monitored['3']);
     assert.ok(monitored['2']);
     assert.equal(monitored['1'], undefined);
+  } finally {
+    uninstall();
+  }
+});
+
+test('sync-then-checkFastBucket surfaces pre-existing direct kids even when updates.items is empty', async () => {
+  // Regression: a user configuring their HN handle for the first time should see the
+  // replies already sitting on their posts. Two bugs conspired pre-fix:
+  //   (1) toMonitored baselined lastKids = current, silencing everything.
+  //   (2) tick only checks items flagged by /v0/updates.json, which routinely misses
+  //       low-traffic items. So even with fix (1), tick alone couldn't see them.
+  // This test deliberately sets updates.items=[] to prove checkFastBucket (called by
+  // runRefresh) surfaces the replies — not tick.
+  const shim = createChromeShim();
+  const uninstall = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
+    const hn = createFakeHN();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const storyId = 500;
+    hn.seedUser({ id: 'alice', created: 0, karma: 100, submitted: [storyId] });
+    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: nowSec - 60, kids: [501, 502, 503], descendants: 3, title: 'hot take' });
+    hn.seedItem({ id: 501, type: 'comment', by: 'bob',     time: nowSec - 50, parent: storyId, text: 'nice' });
+    hn.seedItem({ id: 502, type: 'comment', by: 'charlie', time: nowSec - 40, parent: storyId, text: 'disagree' });
+    hn.seedItem({ id: 503, type: 'comment', by: 'dan',     time: nowSec - 30, parent: storyId, text: 'source?' });
+
+    await syncUserSubmissions(hn, store, 'alice');
+    hn.setUpdates({ items: [], profiles: [] }); // story is NOT in updates feed
+    const tickRes = await tick(hn, store);
+    assert.equal(tickRes.newReplies, 0, 'tick alone cannot surface — story not in updates.items');
+
+    const fastRes = await checkFastBucket(hn, store);
+    assert.equal(fastRes.newReplies, 3, 'checkFastBucket surfaces all 3 existing top-level comments');
+    const replies = await store.getReplies();
+    assert.equal(Object.keys(replies).length, 3);
+    assert.deepEqual(Object.values(replies).map((r) => r.author).sort(), ['bob', 'charlie', 'dan']);
+  } finally {
+    uninstall();
+  }
+});
+
+test('checkOne self-reply filter is case-insensitive', async () => {
+  // Regression: pre-fix, strict-equality comparison meant a user configured as "Alice"
+  // would NOT self-filter replies authored as "alice" (HN canonical). Lowercase both
+  // sides before comparing.
+  const shim = createChromeShim();
+  const uninstall = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'Alice', tickMinutes: 5 });
+    const hn = createFakeHN();
+    const storyId = 700;
+    await store.upsertMonitored({
+      id: storyId,
+      type: 'story',
+      submittedAt: Date.now() - 60_000,
+      lastKids: [],
+      lastDescendants: 0,
+    });
+    hn.seedItem({ id: storyId, type: 'story', by: 'Alice', time: 1, kids: [701, 702], descendants: 2 });
+    hn.seedItem({ id: 701, type: 'comment', by: 'alice', time: 2, parent: storyId, text: 'self-reply canonical-case' });
+    hn.seedItem({ id: 702, type: 'comment', by: 'bob',   time: 2, parent: storyId, text: 'real reply' });
+    hn.setUpdates({ items: [storyId], profiles: [] });
+
+    const res = await tick(hn, store);
+    assert.equal(res.newReplies, 1, 'alice (lowercase) is recognized as self despite config Alice');
+    const replies = await store.getReplies();
+    assert.equal(Object.values(replies)[0].author, 'bob');
+  } finally {
+    uninstall();
+  }
+});
+
+test('checkFastBucket surfaces replies on items that are NOT in /v0/updates.json', async () => {
+  // Regression: HN's updates feed is a narrow snapshot (52ish items at a time).
+  // A monitored story that just got its first reply is often absent from it, so the
+  // updates-filtered tick misses the reply entirely. Force-refresh must bypass that
+  // gate and call checkOne directly on all fast-bucket items.
+  const shim = createChromeShim();
+  const uninstall = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
+    const hn = createFakeHN();
+    const storyId = 600;
+    await store.upsertMonitored({
+      id: storyId,
+      type: 'story',
+      submittedAt: Date.now() - 30 * 60_000, // 30 minutes old → fast bucket
+      lastKids: [],
+      lastDescendants: 0,
+    });
+    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [700], descendants: 1 });
+    hn.seedItem({ id: 700, type: 'comment', by: 'bob', time: 2, parent: storyId, text: 'first reply' });
+    // Deliberately empty: updates.json does NOT flag this story.
+    hn.setUpdates({ items: [], profiles: [] });
+
+    // Plain tick would miss it.
+    const tickRes = await tick(hn, store);
+    assert.equal(tickRes.newReplies, 0, 'tick is correctly gated by updates.items');
+
+    // Force-refresh path catches it.
+    const refreshRes = await checkFastBucket(hn, store);
+    assert.equal(refreshRes.newReplies, 1);
+    assert.equal(refreshRes.itemsChecked, 1);
+    const replies = await store.getReplies();
+    assert.equal(Object.values(replies)[0].author, 'bob');
+  } finally {
+    uninstall();
+  }
+});
+
+test('checkFastBucket excludes items older than FAST_MAX_AGE_MS', async () => {
+  const shim = createChromeShim();
+  const uninstall = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
+    const hn = createFakeHN();
+    // One fresh, one older than a week — only the fresh one should be checked.
+    await store.upsertMonitored({ id: 10, type: 'story', submittedAt: Date.now() - 60_000, lastKids: [], lastDescendants: 0 });
+    await store.upsertMonitored({ id: 11, type: 'story', submittedAt: Date.now() - 10 * DAY_MS, lastKids: [], lastDescendants: 0 });
+    hn.seedItem({ id: 10, type: 'story', by: 'alice', time: 1, kids: [], descendants: 0 });
+    hn.seedItem({ id: 11, type: 'story', by: 'alice', time: 1, kids: [], descendants: 0 });
+
+    const res = await checkFastBucket(hn, store);
+    assert.equal(res.itemsChecked, 1, 'only the sub-week item is checked');
+  } finally {
+    uninstall();
+  }
+});
+
+test('tick skipIds prevents double-fetch when checkFastBucket already processed an item', async () => {
+  // Regression (H1): runRefresh calls checkFastBucket then tick. Items both in the
+  // fast bucket AND in /v0/updates.items would get fetched twice without skipIds —
+  // once by checkFastBucket (where it does real work) and once by tick (where it's
+  // redundant because the baseline is already current). Silent politeness violation.
+  const shim = createChromeShim();
+  const uninstall = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
+    const hn = createFakeHN();
+    const storyId = 800;
+    await store.upsertMonitored({
+      id: storyId,
+      type: 'story',
+      submittedAt: Date.now() - 60_000,
+      lastKids: [],
+      lastDescendants: 0,
+    });
+    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [801], descendants: 1 });
+    hn.seedItem({ id: 801, type: 'comment', by: 'bob', time: 2, parent: storyId, text: 'hi' });
+    // Item appears in BOTH paths — fast bucket (by age) AND updates.items (explicitly flagged).
+    hn.setUpdates({ items: [storyId], profiles: [] });
+
+    const fastRes = await checkFastBucket(hn, store);
+    assert.deepEqual(fastRes.processedIds, [storyId], 'checkFastBucket reports what it processed');
+    const itemFetchesAfterFast = hn.counts().item;
+
+    const tickRes = await tick(hn, store, { skipIds: new Set(fastRes.processedIds) });
+    assert.equal(tickRes.itemsChecked, 0, 'tick skips items checkFastBucket already handled');
+    assert.equal(hn.counts().item, itemFetchesAfterFast, 'no additional item GETs from tick');
+  } finally {
+    uninstall();
+  }
+});
+
+test('set-config user-change forces sync even if a refresh just ran within the throttle window', async () => {
+  // Regression (M1): lastForceRefreshAt is module-global. Without the throttle reset in
+  // the set-config handler, a user who clicks refresh then changes their username within
+  // 10s would fall through to runTick (no force sync), and the new handle would never
+  // get baselined. This test exercises the poller-level invariant — user-change MUST
+  // be able to force a sync regardless of any prior click's throttle window.
+  // NOTE: the actual reset lives in index.ts; this test proves syncUserSubmissions
+  // itself honors {force:true} even if a previous sync happened recently.
+  const shim = createChromeShim();
+  const uninstall = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    const nowSec = Math.floor(Date.now() / 1000);
+    hn.seedUser({ id: 'newuser', created: 0, karma: 1, submitted: [900] });
+    hn.seedItem({ id: 900, type: 'story', by: 'newuser', time: nowSec - 60, kids: [], title: 'new' });
+
+    // Pretend a sync happened 1 second ago (well inside the 30-min cooldown).
+    await store.setTimestamp('lastUserSync', Date.now() - 1000);
+    // Non-forced call must be gated.
+    const gated = await syncUserSubmissions(hn, store, 'newuser');
+    assert.equal(gated, 0, 'non-forced sync within cooldown is gated');
+    // Forced call (as issued by user-change path) must proceed.
+    const forced = await syncUserSubmissions(hn, store, 'newuser', { force: true });
+    assert.equal(forced, 1, 'forced sync bypasses cooldown');
+  } finally {
+    uninstall();
+  }
+});
+
+test('scanBucket daily pass prunes read replies past retention', async () => {
+  // Coverage gap: scanBucket's `if (stampKey === "lastDailyScan")` branch runs
+  // pruneReplies inline. Retention math is tested in retention.test.ts in isolation;
+  // this proves the daily-scan code path actually invokes it.
+  const shim = createChromeShim();
+  const uninstall = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', tickMinutes: 5, retentionDays: 30 });
+    const hn = createFakeHN();
+    hn.seedUser({ id: 'alice', created: 0, karma: 0, submitted: [] });
+    const now = Date.now();
+    // A monitored item in the daily bucket (1d–7d).
+    await store.upsertMonitored({ id: 50, type: 'story', submittedAt: now - 3 * DAY_MS, lastKids: [], lastDescendants: 0 });
+    hn.seedItem({ id: 50, type: 'story', by: 'alice', time: 1, kids: [], descendants: 0 });
+    // Two replies: one fresh-read (keep), one read past retention (drop).
+    await store.addReplies([
+      { id: 51, parentItemId: 50, author: 'bob', text: 'recent', time: 0, read: true,  discoveredAt: now - 5 * DAY_MS },
+      { id: 52, parentItemId: 50, author: 'bob', text: 'stale',  time: 0, read: true,  discoveredAt: now - 60 * DAY_MS },
+    ]);
+
+    await scanBucket(hn, store, BUCKET.DAILY_MIN_AGE_MS, BUCKET.DAILY_MAX_AGE_MS, 'lastDailyScan');
+
+    const replies = await store.getReplies();
+    assert.deepEqual(Object.keys(replies).sort(), ['51'], 'stale read reply pruned, fresh read reply kept');
   } finally {
     uninstall();
   }

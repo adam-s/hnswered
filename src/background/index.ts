@@ -3,7 +3,7 @@ import type { SidepanelMessage, SidepanelResponse } from '../shared/types.ts';
 import { log, logErr } from '../shared/debug.ts';
 import { hnClient } from './hn-client.ts';
 import { createStore } from './store.ts';
-import { scanBucket, syncUserSubmissions, tick } from './poller.ts';
+import { checkFastBucket, scanBucket, syncUserSubmissions, tick } from './poller.ts';
 import { updateBadge } from './badge.ts';
 
 const store = createStore();
@@ -46,8 +46,13 @@ function singleFlight(key: 'tick' | 'daily' | 'weekly', run: () => Promise<void>
     return inFlight[key]!;
   }
   log('index.singleFlight', `new key=${key}`);
-  const p = (async () => {
-    try { await run(); } finally { inFlight[key] = null; }
+  let p!: Promise<void>;
+  p = (async () => {
+    try { await run(); } finally {
+      // Only clear if we're still the slot — runRefresh directly swaps itself in,
+      // and a blind null-assignment here would clobber that slot.
+      if (inFlight[key] === p) inFlight[key] = null;
+    }
   })();
   inFlight[key] = p;
   return p;
@@ -69,36 +74,82 @@ async function runTick(): Promise<void> {
 }
 
 // User-initiated refresh: bypass the 30-min user-sync cooldown because the user
-// is explicitly telling us "something new exists, look now."
+// is explicitly telling us "something new exists, look now." The entire refresh
+// (sync + fast-bucket check + tick) is throttled by a single timestamp, not just
+// the sync portion — otherwise spam-clicks burn ~165 HN requests per click via
+// checkFastBucket alone.
 const MIN_REFRESH_INTERVAL_MS = 10_000;
 let lastForceRefreshAt = 0;
 
 async function runRefresh(): Promise<void> {
-  log('index.runRefresh', `enter`);
-  if (inFlight.tick) {
-    log('index.runRefresh', `drain in-flight tick before seizing slot`);
-    try { await inFlight.tick; } catch {}
-  }
+  log('index.runRefresh', `ENTER`);
   const now = Date.now();
-  const allowForceSync = now - lastForceRefreshAt >= MIN_REFRESH_INTERVAL_MS;
-  if (allowForceSync) lastForceRefreshAt = now;
-  log('index.runRefresh', `allowForceSync=${allowForceSync} sinceLastMs=${now - lastForceRefreshAt}`);
+  const sinceLastMs = now - lastForceRefreshAt;
+  if (sinceLastMs < MIN_REFRESH_INTERVAL_MS) {
+    log('index.runRefresh', `THROTTLED sinceLastMs=${sinceLastMs} min=${MIN_REFRESH_INTERVAL_MS} — running cheap tick only`);
+    await runTick();
+    return;
+  }
+  lastForceRefreshAt = now;
 
-  return singleFlight('tick', async () => {
+  // Seize the singleFlight slot SYNCHRONOUSLY — no awaits before inFlight.tick is
+  // set — so incoming alarm ticks and force-ticks coalesce into our refresh work
+  // rather than slipping past the drain-then-seize window and running alone. The
+  // prior in-flight tick (if any) is drained inside the slot.
+  const prior = inFlight.tick;
+  let slot!: Promise<void>;
+  slot = (async () => {
     try {
-      const { hnUser } = await store.getConfig();
-      if (hnUser && allowForceSync) {
-        await syncUserSubmissions(hnClient, store, hnUser, { force: true });
+      if (prior) {
+        log('index.runRefresh', `drain prior in-flight tick before doing refresh work`);
+        try { await prior; } catch {}
+        log('index.runRefresh', `drained prior tick ok`);
       }
-      await tick(hnClient, store);
+      const config = await store.getConfig();
+      const { hnUser } = config;
+      log('index.runRefresh', `config hnUser=${JSON.stringify(hnUser)} tickMin=${config.tickMinutes} retDays=${config.retentionDays}`);
+      const monitoredBefore = await store.getMonitored();
+      log('index.runRefresh', `pre-sync monitoredCount=${Object.keys(monitoredBefore).length} ids=${JSON.stringify(Object.keys(monitoredBefore))}`);
+      if (hnUser) {
+        log('index.runRefresh', `→ syncUserSubmissions user=${hnUser} force=true`);
+        const added = await syncUserSubmissions(hnClient, store, hnUser, { force: true });
+        log('index.runRefresh', `← syncUserSubmissions user=${hnUser} added=${added}`);
+      } else {
+        log('index.runRefresh', `skip syncUserSubmissions — no hnUser configured`);
+      }
+      const monitoredAfter = await store.getMonitored();
+      log('index.runRefresh', `post-sync monitoredCount=${Object.keys(monitoredAfter).length} ids=${JSON.stringify(Object.keys(monitoredAfter))}`);
+      // Bypass the /v0/updates.json gate on user-initiated refresh — the updates
+      // feed is a narrow snapshot and frequently misses low-traffic items that
+      // just got their first reply. Tick still runs afterward for its side effects
+      // (lastTick timestamp, any items the fast-bucket filter excluded).
+      log('index.runRefresh', `→ checkFastBucket`);
+      const fastRes = await checkFastBucket(hnClient, store);
+      log('index.runRefresh', `← checkFastBucket newReplies=${fastRes.newReplies} itemsChecked=${fastRes.itemsChecked} skipped=${fastRes.skipped} reason=${fastRes.reason}`);
+      // Skip ids we just processed — otherwise tick would re-fetch each item in
+      // updates.items that checkFastBucket already checked, wasting one HN GET per
+      // active monitored item per refresh click.
+      const skipIds = new Set(fastRes.processedIds ?? []);
+      log('index.runRefresh', `→ tick skipIdsCount=${skipIds.size}`);
+      const tickRes = await tick(hnClient, store, { skipIds });
+      log('index.runRefresh', `← tick newReplies=${tickRes.newReplies} itemsChecked=${tickRes.itemsChecked} skipped=${tickRes.skipped} reason=${tickRes.reason}`);
+      const replies = await store.getReplies();
+      log('index.runRefresh', `final replyCount=${Object.keys(replies).length}`);
     } catch (err) {
       logErr('index.runRefresh', `failed`, err);
       console.error('[HNswered] refresh failed:', err);
     } finally {
+      // Clear the slot BEFORE awaiting refreshBadge — otherwise a concurrent
+      // runTick call during the ~1–5ms storage RTT would coalesce into a
+      // fully-resolved promise and return without polling. singleFlight is
+      // meant to coalesce in-flight *work*, not post-work cleanup.
+      if (inFlight.tick === slot) inFlight.tick = null;
       await refreshBadge();
-      log('index.runRefresh', `exit`);
+      log('index.runRefresh', `EXIT`);
     }
-  });
+  })();
+  inFlight.tick = slot;
+  return slot;
 }
 
 async function runDaily(): Promise<void> {
@@ -163,15 +214,19 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message: SidepanelMessage, _sender, sendResponse) => {
-  log('index.onMessage', `kind=${message.kind}`);
+chrome.runtime.onMessage.addListener((message: SidepanelMessage, sender, sendResponse) => {
+  log('index.onMessage', `RECV kind=${message.kind} senderUrl=${sender?.url ?? 'n/a'}`);
   const respond = (value: SidepanelResponse) => sendResponse(value);
   (async () => {
     try {
       switch (message.kind) {
         case 'list-replies': {
           const replies = await store.getReplies();
-          respond({ ok: true, data: Object.values(replies).sort((a, b) => b.discoveredAt - a.discoveredAt) });
+          // Sort by HN's posting time, newest first — not by discoveredAt. When a
+          // baseline-drain surfaces many existing replies in one sweep they all share
+          // a near-identical discoveredAt, which renders ordering meaningless; posting
+          // time gives a stable, HN-matching order.
+          respond({ ok: true, data: Object.values(replies).sort((a, b) => b.time - a.time) });
           return;
         }
         case 'mark-read': {
@@ -198,6 +253,16 @@ chrome.runtime.onMessage.addListener((message: SidepanelMessage, _sender, sendRe
             log('index.onMessage', `user-changed from=${JSON.stringify(prevUser)} to=${JSON.stringify(nextUser)} → clearPerUserState`);
             await store.clearPerUserState();
             await refreshBadge();
+            if (nextUser) {
+              // Kick off a full refresh (force-sync + fast-bucket check + tick) so the
+              // new user's items land in the monitored set and their existing replies
+              // surface, without blocking the settings UI response. Reset
+              // `lastForceRefreshAt` so a recent refresh-button click does not throttle
+              // THIS refresh down to a cheap tick — user-change is never spam.
+              log('index.onMessage', `user-changed → reset throttle + void runRefresh() for user=${nextUser}`);
+              lastForceRefreshAt = 0;
+              void runRefresh();
+            }
           }
           await ensureAlarms();
           respond({ ok: true, data: config });
@@ -295,6 +360,16 @@ chrome.runtime.onMessage.addListener((message: SidepanelMessage, _sender, sendRe
             },
             alarms,
           }});
+          return;
+        }
+        default: {
+          // Unknown message kind — must respond so the sidepanel's sendMessage
+          // callback resolves. Otherwise Chrome holds the port open until SW
+          // suspension, the caller gets "message port closed before a response
+          // was received," and any UI operation that sent the message hangs.
+          const kind = (message as { kind?: unknown }).kind;
+          log('index.onMessage', `UNKNOWN kind=${JSON.stringify(kind)}`);
+          respond({ ok: false, error: `unknown message kind: ${String(kind)}` });
           return;
         }
       }

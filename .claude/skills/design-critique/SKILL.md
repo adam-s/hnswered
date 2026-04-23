@@ -11,6 +11,11 @@ the project's stated aesthetic constraint (e.g., "preserve the Hacker
 News aesthetic", "stay within the system palette") rather than
 proposing a redesign from scratch.
 
+For a different-model-family cross-check, the maintainer runs additional
+critique passes (e.g., Opus 4.6, other providers) out-of-band in a
+separate harness. This skill stays on Opus for maximum aesthetic depth
+through the built-in Agent tool.
+
 ## When to invoke
 
 - User says: "design critique", "Jony Ive review", "UI review", "what's
