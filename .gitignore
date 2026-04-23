@@ -11,6 +11,11 @@ dist/**/*.map
 *.log
 .vscode/
 tmp/
+.analysis/
+analysis/__pycache__/
+*.pyc
+.venv
+cost-analysis/data/
 # Local-only design notes — kept on disk as reference, out of git history.
 docs/logic.md
 docs/sequences.md
