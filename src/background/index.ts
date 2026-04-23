@@ -119,20 +119,9 @@ async function runRefresh(): Promise<void> {
       }
       const monitoredAfter = await store.getMonitored();
       log('index.runRefresh', `post-sync monitoredCount=${Object.keys(monitoredAfter).length} ids=${JSON.stringify(Object.keys(monitoredAfter))}`);
-      // Bypass the /v0/updates.json gate on user-initiated refresh — the updates
-      // feed is a narrow snapshot and frequently misses low-traffic items that
-      // just got their first reply. Tick still runs afterward for its side effects
-      // (lastTick timestamp, any items the fast-bucket filter excluded).
       log('index.runRefresh', `→ checkFastBucket`);
       const fastRes = await checkFastBucket(hnClient, store);
       log('index.runRefresh', `← checkFastBucket newReplies=${fastRes.newReplies} itemsChecked=${fastRes.itemsChecked} skipped=${fastRes.skipped} reason=${fastRes.reason}`);
-      // Skip ids we just processed — otherwise tick would re-fetch each item in
-      // updates.items that checkFastBucket already checked, wasting one HN GET per
-      // active monitored item per refresh click.
-      const skipIds = new Set(fastRes.processedIds ?? []);
-      log('index.runRefresh', `→ tick skipIdsCount=${skipIds.size}`);
-      const tickRes = await tick(hnClient, store, { skipIds });
-      log('index.runRefresh', `← tick newReplies=${tickRes.newReplies} itemsChecked=${tickRes.itemsChecked} skipped=${tickRes.skipped} reason=${tickRes.reason}`);
       const replies = await store.getReplies();
       log('index.runRefresh', `final replyCount=${Object.keys(replies).length}`);
     } catch (err) {

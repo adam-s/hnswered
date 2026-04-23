@@ -6823,7 +6823,7 @@ var root_3$1 = from_html(`<table class="kv"><tbody><tr><td>replies</td><td> </td
 var root_6$1 = from_html(`<div class="status">loading…</div>`);
 
 var root$1 = from_html(
-	`<div class="settings"><form><div class="field"><label for="hnUser">hn username</label> <input id="hnUser" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. dang"/></div> <div class="field"><label for="tick">poll every</label> <select id="tick"></select></div> <div class="field"><label for="retention">drop read replies after</label> <select id="retention"></select></div> <p class="hint">Each poll hits <code>/v0/updates.json</code> first and only fetches items that changed.
+	`<div class="settings"><form><div class="field"><label for="hnUser">hn username</label> <input id="hnUser" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. dang"/></div> <div class="field"><label for="tick">poll every</label> <select id="tick"></select></div> <div class="field"><label for="retention">drop read replies after</label> <select id="retention"></select></div> <p class="hint">Each poll re-checks every post or comment from the past week directly.
       Background scans — daily for the past week, weekly for the past year — catch late replies
       and prune read replies past the retention window.
       Changing the username clears all stored replies so the new account starts fresh.</p> <button type="submit" class="primary"> </button></form> <div class="storage"><div class="section-label">storage</div> <!></div></div> <!>`,
@@ -7485,4 +7485,4 @@ delegate(['click']);
 const target = document.getElementById("app");
 if (!target) throw new Error("#app not found");
 mount(App, { target });
-//# sourceMappingURL=sidepanel-C-FK4Zur.js.map
+//# sourceMappingURL=sidepanel-O1O_MCSR.js.map

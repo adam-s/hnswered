@@ -14,7 +14,8 @@ Chrome MV3 extension (Svelte 5 side panel + background service worker) that watc
 
 ## Hard rules
 
-- **Do not pound HN.** Every cap in [src/shared/constants.ts](../src/shared/constants.ts) is load-bearing: `MAX_SYNC_ITEMS_PER_CALL`, `MAX_REPLIES_PER_CHECK`, `USER_SYNC_MIN_INTERVAL_MS`, `PER_REQUEST_DELAY_MS`, `HARD_REPLY_CAP`. A change that removes a cap or skips the cooldown needs explicit justification. See "Politeness" in the README.
+- **Capture every reply.** This is the hard product requirement — a monitored item's direct replies must surface, eventually, with the only acceptable silent losses being the ones called out explicitly in "Known deferred red-team findings" below (e.g., `DROP_AGE_MS` past 365 days). A change that opens a new silent-loss path is a regression, regardless of how much it saves in HN traffic.
+- **Be polite to HN, but it's a suggestion — not an invariant.** Caps in [src/shared/constants.ts](../src/shared/constants.ts) (`MAX_SYNC_ITEMS_PER_CALL`, `MAX_REPLIES_PER_CHECK`, `USER_SYNC_MIN_INTERVAL_MS`, `PER_REQUEST_DELAY_MS`, `HARD_REPLY_CAP`) are sensible defaults that can move if correctness or UX demands it. Prefer per-request pacing (`PER_REQUEST_DELAY_MS`) over unbounded bursts; call out politeness cost in the PR when you lift a cap.
 - **Aesthetic constraint.** Brand teal `#2d7d7d` (topbar, badge, focus/destructive accents — white text on teal), beige body `#f6f6ef`, Verdana, flat, no rounded corners, no shadows, dense. The look is HN-adjacent by design, but the brand color is deliberately *not* HN's `#ff6600`. UI changes stay within. Use the [design-critique skill](skills/design-critique/SKILL.md) for review passes.
 
 ## Invariants that look removable but aren't

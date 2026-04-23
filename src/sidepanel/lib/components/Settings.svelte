@@ -140,7 +140,7 @@
     </div>
 
     <p class="hint">
-      Each poll hits <code>/v0/updates.json</code> first and only fetches items that changed.
+      Each poll re-checks every post or comment from the past week directly.
       Background scans — daily for the past week, weekly for the past year — catch late replies
       and prune read replies past the retention window.
       Changing the username clears all stored replies so the new account starts fresh.

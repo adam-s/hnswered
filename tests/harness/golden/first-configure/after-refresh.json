@@ -707,7 +707,7 @@
   },
   "timestamps": {
     "lastDailyScan": null,
-    "lastTick": 1776912171903,
+    "lastTick": null,
     "lastUserSync": 1776912171903,
     "lastWeeklyScan": null
   }

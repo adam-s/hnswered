@@ -35,9 +35,6 @@ async function fetchJSON(url, attempt = 0) {
   }
 }
 const hnClient = {
-  async updates() {
-    return fetchJSON(`${HN_API}/updates.json`);
-  },
   async user(id) {
     return fetchJSON(`${HN_API}/user/${encodeURIComponent(id)}.json`);
   },
@@ -387,41 +384,17 @@ async function syncUserSubmissions(client, store, username, opts = {}) {
   await store.setTimestamp("lastUserSync", now);
   return added;
 }
-async function tick(client, store, opts = {}) {
+async function tick(client, store) {
   const config = await store.getConfig();
   if (!config.hnUser) {
     return { newReplies: 0, itemsChecked: 0, skipped: true, reason: "no-user" };
   }
-  log("poller.tick", `start user=${config.hnUser} skipIdsCount=${opts.skipIds?.size ?? 0}`);
-  const updates = await client.updates();
-  const monitored = await store.getMonitored();
-  const userChanged = updates.profiles.includes(config.hnUser);
-  const changedIds = new Set(updates.items);
-  const skipIds = opts.skipIds;
-  const toCheck = [];
-  let skippedByCaller = 0;
-  for (const m of Object.values(monitored)) {
-    if (!changedIds.has(m.id)) continue;
-    if (skipIds?.has(m.id)) {
-      skippedByCaller++;
-      continue;
-    }
-    toCheck.push(m);
-  }
-  log("poller.tick", `updates itemsInFeed=${updates.items.length} profilesInFeed=${updates.profiles.length} userInProfiles=${userChanged} monitored=${Object.keys(monitored).length} toCheck=${toCheck.length} skippedByCaller=${skippedByCaller} toCheckIds=${JSON.stringify(toCheck.map((m) => m.id))}`);
-  if (userChanged) {
-    log("poller.tick", `user-in-profiles user=${config.hnUser} → attempting sync (cooldown-gated)`);
-    await syncUserSubmissions(client, store, config.hnUser);
-  }
-  let total = 0;
-  const processedIds = [];
-  for (const m of toCheck) {
-    processedIds.push(m.id);
-    total += await checkOne(client, store, m, config.hnUser);
-  }
+  log("poller.tick", `start user=${config.hnUser}`);
+  await syncUserSubmissions(client, store, config.hnUser);
+  const res = await checkFastBucket(client, store);
   await store.setTimestamp("lastTick", nowMs());
-  log("poller.tick", `done newReplies=${total} itemsChecked=${toCheck.length}`);
-  return { newReplies: total, itemsChecked: toCheck.length, skipped: false, processedIds };
+  log("poller.tick", `done newReplies=${res.newReplies} itemsChecked=${res.itemsChecked}`);
+  return res;
 }
 async function checkFastBucket(client, store) {
   const config = await store.getConfig();
@@ -562,10 +535,6 @@ async function runRefresh() {
       log("index.runRefresh", `→ checkFastBucket`);
       const fastRes = await checkFastBucket(hnClient, store);
       log("index.runRefresh", `← checkFastBucket newReplies=${fastRes.newReplies} itemsChecked=${fastRes.itemsChecked} skipped=${fastRes.skipped} reason=${fastRes.reason}`);
-      const skipIds = new Set(fastRes.processedIds ?? []);
-      log("index.runRefresh", `→ tick skipIdsCount=${skipIds.size}`);
-      const tickRes = await tick(hnClient, store, { skipIds });
-      log("index.runRefresh", `← tick newReplies=${tickRes.newReplies} itemsChecked=${tickRes.itemsChecked} skipped=${tickRes.skipped} reason=${tickRes.reason}`);
       const replies = await store.getReplies();
       log("index.runRefresh", `final replyCount=${Object.keys(replies).length}`);
     } catch (err) {

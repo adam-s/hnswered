@@ -8,31 +8,31 @@ https://github.com/user-attachments/assets/a577d57c-0c10-4f76-abf9-e51113befbbc
 
 ```mermaid
 flowchart LR
-    poll["poll HN<br/>every N min"] --> changed{"any of my<br/>items changed?"}
-    changed -- yes --> fetch["fetch the<br/>new replies"]
-    fetch --> show["badge +<br/>side panel"]
-    changed -- no --> done["done"]
+    poll["poll HN<br/>every N min"] --> check["re-check every<br/>post or comment<br/>from the past week"]
+    check --> diff{"any new<br/>replies?"}
+    diff -- yes --> show["badge +<br/>side panel"]
+    diff -- no --> done["done"]
 ```
 
-One cheap "has anything changed?" request each tick. Full items are fetched only when something actually did. Two background scans catch late replies on older posts — daily over the past week, weekly over the past year.
+Every tick re-checks each of your posts and comments from the past week directly — one HN `item` request per monitored item, diff against the prior `kids[]` snapshot, fetch only the new reply ids. Two background scans extend the coverage to older posts — daily over the past week, weekly over the past year.
 
-The **refresh** button in the side panel bypasses the change-filter and re-checks every item from the last week directly. HN's `/v0/updates.json` is a narrow snapshot (≈50 items at a time), so a low-traffic post that just got its first reply can fall through the scheduled tick; refresh closes that gap at the cost of up to ~30 extra requests per click, all still rate-limited.
+The **refresh** button in the side panel runs the same sweep on demand, bypassing the 30-minute user-sync cooldown so a brand-new post lands in the monitored set immediately.
 
 When you first set your HN username, existing top-level comments on your recent posts are surfaced as replies on the next tick, not silently baselined away. They drain at up to 10/tick (one item at a time) until caught up.
 
 ## Choosing a poll interval
 
-Typical daily footprint against HN's API. Larger ticks trade freshness for fewer bytes.
+Every tick re-checks each fast-bucket item (posts/comments from the past week) with one HN request per item, so cost scales with how many items you currently have live. Rough daily footprint assuming ~15 monitored fast-bucket items:
 
 | Poll every | Requests/day | Bytes/day | Fits |
 |---|---:|---:|---|
-| 1 min | ~2,800 | ~20 MB | near-real-time, very active threads |
-| **5 min** (default) | ~600 | ~6 MB | balanced |
-| 15 min | ~250 | ~3 MB | battery / data conscious |
-| 30 min | ~150 | ~3 MB | low-activity account |
-| 60 min | ~70 | ~1.5 MB | casual checker |
+| 1 min | ~22,000 | ~45 MB | near-real-time, very active threads |
+| **5 min** (default) | ~4,500 | ~9 MB | balanced |
+| 15 min | ~1,500 | ~3 MB | battery / data conscious |
+| 30 min | ~750 | ~1.5 MB | low-activity account |
+| 60 min | ~375 | ~0.8 MB | casual checker |
 
-Numbers include the every-30-minute "deep sync" that refreshes your submission list. If the monitored user is very prolific (tens of thousands of comments), that single sync response can reach ~500 KB; typical is 5–10 KB.
+Scales roughly linearly with fast-bucket size. A user with 50 live items at 5-min cadence spends ~15,000 req/day; one with 3 items spends ~900. The every-30-minute "deep sync" that refreshes your submission list adds a few requests on top.
 
 ## Retention
 

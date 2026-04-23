@@ -74,7 +74,6 @@ test('tick skips replies authored by the user themselves', async () => {
       lastKids: [],
       lastDescendants: 0,
     });
-    hn.setUpdates({ items: [storyId], profiles: [] });
     hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [200, 201], descendants: 2 });
     hn.seedItem({ id: 200, type: 'comment', by: 'alice', text: 'self-reply', time: 2, parent: storyId });
     hn.seedItem({ id: 201, type: 'comment', by: 'bob', text: 'real reply', time: 2, parent: storyId });
@@ -110,13 +109,11 @@ test('cap on new-kid fetches leaves uncapped ids unmarked so the next tick catch
     for (const id of kidIds) {
       hn.seedItem({ id, type: 'comment', by: `user${id}`, text: `reply ${id}`, time: 2, parent: storyId });
     }
-    hn.setUpdates({ items: [storyId], profiles: [] });
 
     const first = await tick(hn, store);
     assert.equal(first.newReplies, 10, 'first tick fetches MAX_REPLIES_PER_CHECK');
 
-    // A second tick (with the updates feed still flagging the story) should catch the remaining 5.
-    hn.setUpdates({ items: [storyId], profiles: [] });
+    // Second tick should catch the remaining 5.
     const second = await tick(hn, store);
     assert.equal(second.newReplies, 5, 'second tick catches the leftover 5');
     const all = await store.getReplies();
@@ -144,7 +141,6 @@ test('tick detects a new direct reply on a monitored story', async () => {
       lastDescendants: 0,
     });
 
-    hn.setUpdates({ items: [storyId], profiles: [] });
     hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, title: 'hello', kids: [200], descendants: 1 });
     hn.seedItem({ id: 200, type: 'comment', by: 'bob', text: 'nice post', time: 2, parent: storyId });
 
@@ -194,7 +190,6 @@ test('tick detects replies on deeply-nested leaf comments identically to top-lev
     // Someone replies directly to alice's deep leaf comment.
     hn.seedItem({ id: 7, type: 'comment', by: 'bob', text: 'deeply thoughtful reply', time: nowSec - 10, parent: 6 });
     hn.seedItem({ id: 6, type: 'comment', by: 'alice',  time: nowSec - 50, kids: [7],  parent: 5 });
-    hn.setUpdates({ items: [6], profiles: [] });
 
     const res = await tick(hn, store);
     assert.equal(res.newReplies, 1, 'new reply on deep leaf detected');
@@ -203,30 +198,6 @@ test('tick detects replies on deeply-nested leaf comments identically to top-lev
     assert.equal(r.author, 'bob');
     assert.equal(r.parentItemId, 6);
     assert.equal(r.parentAuthor, 'alice', 'parent excerpt context captured');
-  } finally {
-    uninstall();
-  }
-});
-
-test('tick does nothing when updates does not mention monitored items', async () => {
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    await store.upsertMonitored({
-      id: 1,
-      type: 'story',
-      submittedAt: Date.now() - DAY_MS,
-      lastKids: [],
-    });
-    hn.setUpdates({ items: [999], profiles: [] });
-    const res = await tick(hn, store);
-    assert.equal(res.newReplies, 0);
-    assert.equal(res.itemsChecked, 0);
-    assert.equal(hn.counts().item, 0);
-    assert.equal(hn.counts().updates, 1);
   } finally {
     uninstall();
   }
@@ -271,14 +242,10 @@ test('syncUserSubmissions pulls items newer than 1yr and stops at older ones', a
   }
 });
 
-test('sync-then-checkFastBucket surfaces pre-existing direct kids even when updates.items is empty', async () => {
+test('tick surfaces pre-existing direct kids when user first configures their handle', async () => {
   // Regression: a user configuring their HN handle for the first time should see the
-  // replies already sitting on their posts. Two bugs conspired pre-fix:
-  //   (1) toMonitored baselined lastKids = current, silencing everything.
-  //   (2) tick only checks items flagged by /v0/updates.json, which routinely misses
-  //       low-traffic items. So even with fix (1), tick alone couldn't see them.
-  // This test deliberately sets updates.items=[] to prove checkFastBucket (called by
-  // runRefresh) surfaces the replies — not tick.
+  // replies already sitting on their posts. Without toMonitored baselining lastKids=[],
+  // everything is silenced.
   const shim = createChromeShim();
   const uninstall = installChromeShim(shim);
   try {
@@ -293,13 +260,8 @@ test('sync-then-checkFastBucket surfaces pre-existing direct kids even when upda
     hn.seedItem({ id: 502, type: 'comment', by: 'charlie', time: nowSec - 40, parent: storyId, text: 'disagree' });
     hn.seedItem({ id: 503, type: 'comment', by: 'dan',     time: nowSec - 30, parent: storyId, text: 'source?' });
 
-    await syncUserSubmissions(hn, store, 'alice');
-    hn.setUpdates({ items: [], profiles: [] }); // story is NOT in updates feed
     const tickRes = await tick(hn, store);
-    assert.equal(tickRes.newReplies, 0, 'tick alone cannot surface — story not in updates.items');
-
-    const fastRes = await checkFastBucket(hn, store);
-    assert.equal(fastRes.newReplies, 3, 'checkFastBucket surfaces all 3 existing top-level comments');
+    assert.equal(tickRes.newReplies, 3, 'tick surfaces all 3 existing top-level comments');
     const replies = await store.getReplies();
     assert.equal(Object.keys(replies).length, 3);
     assert.deepEqual(Object.values(replies).map((r) => r.author).sort(), ['bob', 'charlie', 'dan']);
@@ -329,7 +291,6 @@ test('checkOne self-reply filter is case-insensitive', async () => {
     hn.seedItem({ id: storyId, type: 'story', by: 'Alice', time: 1, kids: [701, 702], descendants: 2 });
     hn.seedItem({ id: 701, type: 'comment', by: 'alice', time: 2, parent: storyId, text: 'self-reply canonical-case' });
     hn.seedItem({ id: 702, type: 'comment', by: 'bob',   time: 2, parent: storyId, text: 'real reply' });
-    hn.setUpdates({ items: [storyId], profiles: [] });
 
     const res = await tick(hn, store);
     assert.equal(res.newReplies, 1, 'alice (lowercase) is recognized as self despite config Alice');
@@ -340,11 +301,7 @@ test('checkOne self-reply filter is case-insensitive', async () => {
   }
 });
 
-test('checkFastBucket surfaces replies on items that are NOT in /v0/updates.json', async () => {
-  // Regression: HN's updates feed is a narrow snapshot (52ish items at a time).
-  // A monitored story that just got its first reply is often absent from it, so the
-  // updates-filtered tick misses the reply entirely. Force-refresh must bypass that
-  // gate and call checkOne directly on all fast-bucket items.
+test('checkFastBucket surfaces new replies on all fast-bucket items directly', async () => {
   const shim = createChromeShim();
   const uninstall = installChromeShim(shim);
   try {
@@ -355,20 +312,13 @@ test('checkFastBucket surfaces replies on items that are NOT in /v0/updates.json
     await store.upsertMonitored({
       id: storyId,
       type: 'story',
-      submittedAt: Date.now() - 30 * 60_000, // 30 minutes old → fast bucket
+      submittedAt: Date.now() - 30 * 60_000,
       lastKids: [],
       lastDescendants: 0,
     });
     hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [700], descendants: 1 });
     hn.seedItem({ id: 700, type: 'comment', by: 'bob', time: 2, parent: storyId, text: 'first reply' });
-    // Deliberately empty: updates.json does NOT flag this story.
-    hn.setUpdates({ items: [], profiles: [] });
 
-    // Plain tick would miss it.
-    const tickRes = await tick(hn, store);
-    assert.equal(tickRes.newReplies, 0, 'tick is correctly gated by updates.items');
-
-    // Force-refresh path catches it.
     const refreshRes = await checkFastBucket(hn, store);
     assert.equal(refreshRes.newReplies, 1);
     assert.equal(refreshRes.itemsChecked, 1);
@@ -394,42 +344,6 @@ test('checkFastBucket excludes items older than FAST_MAX_AGE_MS', async () => {
 
     const res = await checkFastBucket(hn, store);
     assert.equal(res.itemsChecked, 1, 'only the sub-week item is checked');
-  } finally {
-    uninstall();
-  }
-});
-
-test('tick skipIds prevents double-fetch when checkFastBucket already processed an item', async () => {
-  // Regression (H1): runRefresh calls checkFastBucket then tick. Items both in the
-  // fast bucket AND in /v0/updates.items would get fetched twice without skipIds —
-  // once by checkFastBucket (where it does real work) and once by tick (where it's
-  // redundant because the baseline is already current). Silent politeness violation.
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    const storyId = 800;
-    await store.upsertMonitored({
-      id: storyId,
-      type: 'story',
-      submittedAt: Date.now() - 60_000,
-      lastKids: [],
-      lastDescendants: 0,
-    });
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [801], descendants: 1 });
-    hn.seedItem({ id: 801, type: 'comment', by: 'bob', time: 2, parent: storyId, text: 'hi' });
-    // Item appears in BOTH paths — fast bucket (by age) AND updates.items (explicitly flagged).
-    hn.setUpdates({ items: [storyId], profiles: [] });
-
-    const fastRes = await checkFastBucket(hn, store);
-    assert.deepEqual(fastRes.processedIds, [storyId], 'checkFastBucket reports what it processed');
-    const itemFetchesAfterFast = hn.counts().item;
-
-    const tickRes = await tick(hn, store, { skipIds: new Set(fastRes.processedIds) });
-    assert.equal(tickRes.itemsChecked, 0, 'tick skips items checkFastBucket already handled');
-    assert.equal(hn.counts().item, itemFetchesAfterFast, 'no additional item GETs from tick');
   } finally {
     uninstall();
   }

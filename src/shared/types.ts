@@ -24,11 +24,6 @@ export interface HNUser {
   submitted?: number[];
 }
 
-export interface HNUpdates {
-  items: number[];
-  profiles: string[];
-}
-
 export interface Config {
   hnUser: string;
   tickMinutes: number;

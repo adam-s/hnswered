@@ -247,56 +247,38 @@ export async function syncUserSubmissions(
   return added;
 }
 
+// Alarm-driven polling cycle. Syncs the user's new submissions (cooldown-gated)
+// and then checks every monitored item in the fast bucket (age < 1 week) directly.
+// No /v0/updates.json gate — we previously used that feed's narrow rolling window
+// to cheaply filter which items to re-fetch, but it routinely missed replies on
+// low-traffic items (since the feed holds only ~40 globally-changed ids at a
+// time). Direct checks every tick give 100% per-reply catch at the cost of one
+// HN request per fast-bucket item per tick; caps in constants.ts still bound
+// worst-case volume.
 export async function tick(
   client: HNClient,
   store: Store,
-  opts: { skipIds?: ReadonlySet<number> } = {},
 ): Promise<PollResult> {
   const config = await store.getConfig();
   if (!config.hnUser) {
     log('poller.tick', `skip reason=no-user`);
     return { newReplies: 0, itemsChecked: 0, skipped: true, reason: 'no-user' };
   }
-  log('poller.tick', `start user=${config.hnUser} skipIdsCount=${opts.skipIds?.size ?? 0}`);
+  log('poller.tick', `start user=${config.hnUser}`);
 
-  const updates = await client.updates();
-  const monitored = await store.getMonitored();
-  const userChanged = updates.profiles.includes(config.hnUser);
-  const changedIds = new Set(updates.items);
-  const skipIds = opts.skipIds;
-  const toCheck: MonitoredItem[] = [];
-  let skippedByCaller = 0;
-  for (const m of Object.values(monitored)) {
-    if (!changedIds.has(m.id)) continue;
-    if (skipIds?.has(m.id)) { skippedByCaller++; continue; }
-    toCheck.push(m);
-  }
-  log('poller.tick', `updates itemsInFeed=${updates.items.length} profilesInFeed=${updates.profiles.length} userInProfiles=${userChanged} monitored=${Object.keys(monitored).length} toCheck=${toCheck.length} skippedByCaller=${skippedByCaller} toCheckIds=${JSON.stringify(toCheck.map((m) => m.id))}`);
+  // Sync first so any brand-new posts enter `monitored` before we check replies.
+  // Cooldown-gated (30min by default) — force-refresh bypasses via runRefresh.
+  await syncUserSubmissions(client, store, config.hnUser);
 
-  if (userChanged) {
-    log('poller.tick', `user-in-profiles user=${config.hnUser} → attempting sync (cooldown-gated)`);
-    // Honor the cooldown even when /v0/updates.profiles flags our user — an active user
-    // can appear in that list on every tick, which would otherwise blow the sync budget.
-    await syncUserSubmissions(client, store, config.hnUser);
-  }
-
-  let total = 0;
-  const processedIds: number[] = [];
-  for (const m of toCheck) {
-    processedIds.push(m.id);
-    total += await checkOne(client, store, m, config.hnUser);
-  }
-
+  const res = await checkFastBucket(client, store);
   await store.setTimestamp('lastTick', nowMs());
-  log('poller.tick', `done newReplies=${total} itemsChecked=${toCheck.length}`);
-  return { newReplies: total, itemsChecked: toCheck.length, skipped: false, processedIds };
+  log('poller.tick', `done newReplies=${res.newReplies} itemsChecked=${res.itemsChecked}`);
+  return res;
 }
 
-// User-initiated force-refresh path: bypass the /v0/updates.json gate and check
-// every fast-bucket monitored item directly. Necessary because HN's updates feed
-// is a narrow, fast-rolling snapshot — low-traffic items with a single new reply
-// can easily be absent from it, so the cheap `updates.items`-filtered tick misses
-// them. Bounded: <= MAX_SYNC_ITEMS_PER_CALL items × O(1 + kid-fetch-cap) requests.
+// Checks every monitored item in the fast bucket (age < 1 week) directly, with
+// no gating. Called by tick() on every alarm fire and by runRefresh on every
+// user click. Bounded by |fast bucket| × O(1 + MAX_REPLIES_PER_CHECK) requests.
 export async function checkFastBucket(
   client: HNClient,
   store: Store,
