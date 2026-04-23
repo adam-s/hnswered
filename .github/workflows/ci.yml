@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel an in-progress run for this ref when a new commit lands.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Default token scope is read-only — explicitly minimal.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Defense-in-depth against any leaked timer keeping a child node:test
+    # process alive past its assertions. Default GitHub Actions timeout is
+    # 6 hours; 10 minutes is plenty for our ~7s of work.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # pnpm/action-setup must run BEFORE setup-node so setup-node can ask
+      # pnpm where its store lives. Version is read from package.json's
+      # `packageManager` field — no `with: version: 9` needed.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm type-check
+      - run: pnpm test
+      # Replays committed tape fixtures; no network access needed.
+      - run: pnpm harness:replay
