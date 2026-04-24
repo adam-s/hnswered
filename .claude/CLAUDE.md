@@ -1,137 +1,93 @@
 # CLAUDE.md
 
-Notes for future Claude Code sessions and human contributors on this repo.
-
 ## Language (mandatory)
 
-Do not use the word "kill" unless referring to the Unix `kill` command — AI agents should preserve life, even in metaphor.
-Use instead: **stop**, **end**, **halt**, **exit**, **close**, **shut down**, **cancel**, **interrupt**, **terminate**, **abort**.
-Example: "stop the process" / "close the connection" / "halt the loop".
+Do not use "kill" except for the Unix `kill` command. Use stop / end / halt / exit / close / shut down / cancel / interrupt / terminate / abort.
 
 ## What this is
 
-Chrome MV3 extension (Svelte 5 side panel + background service worker) that watches Hacker News for replies to a configured user's posts and comments. **Read-only** against live HN — only `GET` to `https://hacker-news.firebaseio.com/v0/*`. Never posts or writes.
+Chrome MV3 extension (Svelte 5 side panel + background SW) watching HN for replies to a configured user's posts and comments. **Read-only** — only `GET` to `https://hacker-news.firebaseio.com/v0/*`.
 
 ## Hard rules
 
-- **Do not pound HN.** Every cap in [src/shared/constants.ts](../src/shared/constants.ts) is load-bearing: `MAX_SYNC_ITEMS_PER_CALL`, `MAX_REPLIES_PER_CHECK`, `USER_SYNC_MIN_INTERVAL_MS`, `PER_REQUEST_DELAY_MS`, `HARD_REPLY_CAP`. A change that removes a cap or skips the cooldown needs explicit justification. See "Politeness" in the README.
-- **Aesthetic constraint.** Brand teal `#2d7d7d` (topbar, badge, focus/destructive accents — white text on teal), beige body `#f6f6ef`, Verdana, flat, no rounded corners, no shadows, dense. The look is HN-adjacent by design, but the brand color is deliberately *not* HN's `#ff6600`. UI changes stay within. Use the [design-critique skill](skills/design-critique/SKILL.md) for review passes.
+- **Capture every reply.** A new silent-loss path is a regression. The only designed exception is the `DROP_AGE_MS` 365-day retention cap.
+- **Production politeness.** Caps in [src/shared/constants.ts](../src/shared/constants.ts) (`MAX_SYNC_ITEMS_PER_CALL`, `MAX_REPLIES_PER_CHECK`, `USER_SYNC_MIN_INTERVAL_MS`, `PER_REQUEST_DELAY_MS`, `HARD_REPLY_CAP`) are defaults; lift deliberately and note the cost.
+- **Research tooling under `cost-analysis/` plays by different rules.** One-shot probes from one IP, not millions of users. Prefer concurrency 10–20 + reactive 403/429 backoff over preemptive delays. Use wall-time and request-count seatbelts (e.g. 10 min, 20k Algolia / 50k Firebase). Log throttles visibly.
+- **Aesthetic.** Teal `#2d7d7d`, beige `#f6f6ef`, Verdana, flat, no rounded corners, no shadows, dense. Deliberately NOT HN orange. Use [design-critique skill](skills/design-critique/SKILL.md) for reviews.
 
-## Invariants that look removable but aren't
+## Load-bearing invariants
 
-- **`self.__hnswered` global** in [src/background/index.ts](../src/background/index.ts) — consumed by both the Playwright `scripts/` harnesses (via CDP `evaluate`) AND the Node record/replay harness (via `globalThis` after `await import`). Removing it breaks two test layers, not one.
-- **`hnswered:` alarm-key prefix** in [src/shared/constants.ts](../src/shared/constants.ts) — stable identifier. Renaming orphans existing users' alarms.
-- **Self-reply filter** (`if (it.by === hnUser) continue`) in [src/background/poller.ts](../src/background/poller.ts) — intentional. Your own comments on your own items are silent. For manual end-to-end testing, temporarily comment it out; do not delete.
-- **`lastKids = currKids.filter(id => processed.has(id))`** in `poller.ts` `checkOne` — do NOT simplify to `lastKids = currKids`. That silently buries replies past `MAX_REPLIES_PER_CHECK`. Covered by a regression test.
-- **`singleFlight('tick', ...)` guards** in [src/background/index.ts](../src/background/index.ts) — `runRefresh` deliberately drains any in-flight tick *first* before taking the slot, so the forced user-sync isn't skipped by a concurrent alarm tick. Ordering matters.
-- **Force-refresh vs force-tick** — force-refresh bypasses the 30-min user-sync cooldown (user-initiated). force-tick honors it. Don't conflate in the message handler.
+- **`self.__hnswered`** in [src/background/index.ts](../src/background/index.ts) — consumed by Playwright harnesses (CDP `evaluate`) AND Node harness (`globalThis` import). Ships in SW scope only.
+- **`hnswered:` prefix** on the alarm key and `navigator.locks` name — renaming orphans existing users' alarms.
+- **Self-reply filter** (case-insensitive `hit.author === hnUser` in `pollComments`) in [poller.ts](../src/background/poller.ts) — intentional silence. Comment out for manual end-to-end tests; do not delete.
+- **Algolia `parent_id` is authoritative for direct descendants.** The retrospective sweep at [cost-analysis/docs/reports/report.md](../cost-analysis/docs/reports/report.md) measured 99.99% live agreement vs. Firebase `kids[]` minus dead/deleted (and Algolia excludes dead/deleted by design — which is what we want). Don't reach for Firebase as a recovery layer without data showing it's actually needed.
+- **`OVERLAP_MS ≥ author-sync cadence + one tick`.** Otherwise a reply on a freshly-authored comment can age out of the overlap window before the next author-sync discovers the parent. `OVERLAP_MS` is pinned at `2× AUTHOR_SYNC_MS` for margin; treat it as the only correctness knob.
+- **Lock mode in [index.ts](../src/background/index.ts).** `runRefresh` acquires `LOCK.TICK` exclusive (queues behind in-flight tick); `runTick` uses `{ ifAvailable: true }` (peer alarm fires drop). Never switch `runRefresh` to `ifAvailable` — a user click during an alarm tick MUST do its sync work after, not skip.
+- **One alarm, internal cadence gates.** `runTick` always runs `pollComments`, and runs `maybeSyncAuthor` only when `lastAuthorSync` is >= `AUTHOR_SYNC_MS` ago. Don't introduce new alarms — the cost is one compound check per tick, the payoff is a single state machine.
+- **Retention pruning rides inside `syncAuthor`.** `pruneReplies` is called at the end of every syncAuthor run (~10-min cadence). There is no separate daily-scan anymore; if syncAuthor stops running, retention stops running.
+- **Force-refresh bypasses the author-sync cadence gate** (calls `syncAuthor` directly, not `maybeSyncAuthor`). Still honors the 10s refresh throttle. Don't conflate the two.
+- **No `/v0/updates.json`.** The rolling ~40-id window silently drops replies on low-traffic items. Don't re-introduce it as a gate or optimization — the Algolia comment feed is strictly better.
 
-## Test + build conventions
+## Tests + build
 
-Three test layers, in order of speed and fidelity:
+- `pnpm type-check`
+- `pnpm test` — unit (`tests/unit/*.test.ts`), ~2s, shims at `tests/shim/{chrome,fake-hn}.ts`.
+- `pnpm harness:replay` — deterministic tape replay, ~5s.
+- `pnpm impersonate` — Playwright + live HN, budget-bounded, single-user, never loops.
+- `node scripts/audit.mjs && node scripts/audit-analyze.mjs` — bounded multi-user live audit. Invoke via [audit skill](skills/audit/SKILL.md).
+- **`pnpm build` after ANY edit to `src/`** — the user loads the extension from `dist/`. Chrome does not see `src/` changes until `dist/` is rebuilt AND the extension is reloaded in `chrome://extensions`. Type-check passing is not the same as dist reflecting the edit. After the user reloads, also confirm the SW restarted (old SW keeps running the old code until reload).
+- **`DEBUG` in [src/shared/debug.ts](../src/shared/debug.ts)** toggles all `log()` / `logErr()` output. It is `false` in shipped prod; flip to `true` + rebuild when diagnosing live behavior. The user sees *no* console output when `DEBUG=false`, regardless of how much the code calls `log(...)`.
 
-1. **Unit tests** — `pnpm test`. `node --test --experimental-strip-types` over `tests/unit/*.test.ts`. Hand-crafted fixtures via `tests/shim/{chrome,fake-hn}.ts`. ~2s. Pure logic.
-2. **Harness scenarios** — `pnpm harness:replay`. Drives the unmodified background module against a committed HN tape under a pinned `Date.now()`. Deterministic, offline. ~5s. Goldens at `tests/harness/golden/<scenario>/<step>.json`. See "Recording HN tapes" below.
-3. **Live integration** — `pnpm impersonate` (Playwright + real Chromium + live HN, budget-bounded, single-user sequential). `--demo=N` seeds top stories with empty baselines to prove the detection pipeline. Budget-bounded one-shot — never loop. Other `scripts/*.mjs` harnesses (`snapshot.mjs`, `perf-profile.mjs`, `chaos.mjs`) follow the same `--label`, `--key=value`, JSON-summary convention.
-4. **Live audit** — `node scripts/audit.mjs` + `node scripts/audit-analyze.mjs`, invoked via the [audit skill](skills/audit/SKILL.md). Multi-user, parallel, time-series snapshots over a bounded window (default 60min, 4 users), then deterministic divergence analysis against live HN ground truth. Same politeness rules as impersonate; the skill enforces caps on duration, budget, and user count. See [.claude/skills/audit/SKILL.md](skills/audit/SKILL.md) for invocation patterns.
+CI at [.github/workflows/ci.yml](../.github/workflows/ci.yml) runs type-check + test + harness:replay on push/PR, ~7s + install. `harness:record` is NOT in CI — hits live HN.
 
-Other:
+Conventions:
 
-- **TypeScript imports use `.ts` extensions** (`import x from './foo.ts'`). No ts-node, no tsx. The `--experimental-strip-types` flag does NOT support TS-only constructs like parameter properties or enums — use plain field declarations.
-- **`pnpm build`** outputs to `dist/`. Vite multi-entry emits `background.js` and `sidepanel.html` + its chunked JS/CSS. `dist/` is tracked in git (see [.gitignore](../.gitignore)) so a fresh clone can load the extension without a build step.
-- **`pnpm type-check`** is `tsc --noEmit`.
-- **Svelte 5 runes** throughout: `$state`, `$derived`, `$props`. Not Svelte 4 stores.
+- TS imports use `.ts` extensions (`--experimental-strip-types`). No parameter properties, no enums.
+- Svelte 5 runes only (`$state`, `$derived`, `$props`).
+- `dist/` is tracked; a typical PR is `src/` + `dist/` rebuild as one commit.
 
-## Loading the extension locally
+## Tapes
 
-The extension is loaded as **unpacked** from `dist/`, not from a `.crx` or the Chrome Web Store:
-
-1. Open `chrome://extensions`, enable **Developer mode** (top-right toggle).
-2. Click **Load unpacked**, select the repo's `dist/` folder.
-3. The HNswered side panel becomes available from the toolbar icon.
-
-After any source edit under `src/`, the loaded extension still runs the **previously built bundle** in `dist/` — Chrome does not watch source files. To pick up changes:
-
-1. `pnpm build` (rebuilds `dist/`).
-2. `chrome://extensions` → click the **reload** icon on the HNswered card.
-3. Close and reopen the side panel so it picks up the new sidepanel bundle (the SW reload alone doesn't refresh an already-open panel).
-
-Because `dist/` is committed, a typical PR includes both the `src/` change AND the corresponding `dist/` rebuild as one commit — that way reviewers and contributors who side-load from a checkout see the change without running `pnpm build` themselves.
-
-## Recording HN tapes
-
-The harness replays from `tests/harness/fixtures/<scenario>/tape.json`. Tapes are committed; goldens are committed.
+Fixtures at `tests/harness/fixtures/<scenario>/tape.json`; goldens at `tests/harness/golden/<scenario>/<step>.json`. Both committed.
 
 ```bash
-# Record a fresh tape against live HN (one-shot, ~3s, ~30-150 calls).
-pnpm harness:record --scenario=<name>
-
-# Seed/refresh the matching goldens from a deterministic replay.
-HARNESS_UPDATE_GOLDEN=1 pnpm harness:replay
-
-# Verify the loop:
-pnpm harness:replay
+pnpm harness:record --scenario=<name>            # live HN, one-shot
+HARNESS_UPDATE_GOLDEN=1 pnpm harness:replay      # regen goldens from replay
+pnpm harness:replay                              # verify
 ```
 
-- **`text` fields are truncated to 10 chars in tapes** (with `__textTruncatedFrom: <origLen>` marker stripped on replay) to keep tapes small. Production code under test sees real untruncated text during recording — only the tape file is compacted.
-- **Goldens come from REPLAY, never from RECORD.** Auto-writing goldens during recording would capture untruncated text and diverge from replay output. The recorder's `expectGolden` calls are no-ops; the separate `HARNESS_UPDATE_GOLDEN=1 pnpm harness:replay` pass writes them.
-- **Single-driver-per-process invariant.** `tests/harness/driver.ts` asserts `globalThis.__hnswered` is unset on entry. Node's ESM loader doesn't honor query-string cache-busters for `.ts` files, so multi-driver-per-process scenarios would silently re-bind a stale module. Run each scenario in its own test file (`node --test` spawns a child per file).
-- **Re-record cadence**: when CI starts diverging from production behavior (HN schema drift), or when a tape contains non-200 statuses (which incur real-wall backoff sleeps on replay).
-
-## CI
-
-GitHub Actions workflow at [.github/workflows/ci.yml](../.github/workflows/ci.yml). Runs on push to `main` and on every PR. Three commands:
-
-1. `pnpm type-check`
-2. `pnpm test`
-3. `pnpm harness:replay`
-
-Total CI time ~7s + install. `pnpm install` is cached via `actions/setup-node@v4` `cache: pnpm`. `harness:record` is deliberately NOT in CI — it hits live HN.
-
-Observe runs from the terminal:
-
-```bash
-gh run watch                          # tail the latest run for current branch
-gh run view --log-failed              # show only failed step logs
-gh run list --workflow=ci.yml -L 5    # last 5 runs
-gh workflow run ci.yml                # manually trigger (needs workflow_dispatch in yml)
-```
-
-The CLI does NOT author workflow files — write `.yml` by hand and commit. After that, `gh` is your day-to-day observation tool.
+- Goldens come from REPLAY, never RECORD (`text` is truncated to 10 chars in tapes).
+- Single-driver-per-process invariant in `tests/harness/driver.ts` — one scenario per test file.
+- Re-record when CI diverges from prod or tapes hold non-200s (they incur real-wall sleeps on replay).
 
 ## Skills
 
-Two patterns:
+All read-only against production code. Format conventions: [.claude/reference/anthropic-conventions.md](reference/anthropic-conventions.md).
 
-1. **Skill-as-prompt-template** — invoked via the `Agent` tool with `subagent_type: "general-purpose"` and `model: "opus"`. SKILL.md body is a template that Claude fills with project context.
-2. **Skill-as-shell-orchestrator** — invoked via Bash. SKILL.md body documents how to call existing scripts with sane defaults and enforced caps.
+- [red-team-review](skills/red-team-review/SKILL.md) — adversarial bug hunt of production code.
+- [test-red-team](skills/test-red-team/SKILL.md) — adversarial audit of the test suite (tautologies, shim lies, coverage gaps).
+- [design-critique](skills/design-critique/SKILL.md) — Jony-Ive UI critique.
+- [audit](skills/audit/SKILL.md) — bounded multi-user live audit + divergence analysis.
 
-For cross-model adversary diversity, the maintainer runs additional passes (Opus 4.6, other providers) out-of-band in a separate harness — the built-in `Agent` tool doesn't support version pinning.
+## Known deferred findings
 
-- **[red-team-review](skills/red-team-review/SKILL.md)** — adversarial bug hunt (prompt-template). Use at checkpoints during long features, after substantial surface-area changes, or before release.
-- **[design-critique](skills/design-critique/SKILL.md)** — Jony-Ive-persona UI critique inside the aesthetic constraint above (prompt-template).
-- **[audit](skills/audit/SKILL.md)** — bounded live multi-user audit + deterministic divergence analysis (shell-orchestrator). Hard caps enforced: never run unbounded.
+Tradeoffs, not oversights:
 
-All three are read-only against production code. See each SKILL.md for cleanup discipline. For skill/hook/agent/settings format conventions, see [.claude/reference/anthropic-conventions.md](reference/anthropic-conventions.md).
+- **No CAS on `chrome.storage.local` RMW.** Mitigated by `navigator.locks` on `LOCK.TICK`, not eliminated. Per-key lock is the real fix if it bites.
+- **`lastAuthorSync` updates on forced syncs.** An alarm tick shortly after force-refresh skips its author-sync work (cadence gate). Gate measures work done, not intent.
+- **Sidepanel `onStorageChanged` filters to `replies` and `config` only.** Timestamps, `backfillQueue`, `monitored`, `backfillSweepFloor` don't affect render output — ignoring them avoids ~500 IPC list-replies round-trips during a fullDrain.
+- **fullDrain holds `LOCK.TICK` for the full queue.** At 500 items × 1.5s pacing = ~12.5min lock hold, blocking alarm-tick polling throughout. Rolling-cap risk at power-user scale. Releasing the lock mid-drain reintroduces the interleaving concerns the lock was added for (concurrent pollComments mutating `replies`, user-change clearing state mid-drain). Revisit if production telemetry shows Algolia 429s during fullDrain.
+- **No Firebase recovery layer.** Relies entirely on Algolia `parent_id`. Sweep measured 99.99% live agreement, but if real-world usage turns up systematic Algolia index-lag misses, add a daily `/v0/item/<id>.json` cross-check.
+- **No per-scan request budget.** Algolia responses are bounded (1000 hits/page) and `pollComments` makes exactly one request per tick, but a pathological `syncAuthor` with >1000 pages of author history + pagination could burn more than expected. Not currently implemented.
+- **`__hnswered` ships in prod bundle.** SW scope only, not web-reachable.
+- **`lastForceRefreshAt` doesn't survive SW suspension.** Spam-clicking through MV3 suspension bypasses the 10s refresh throttle.
+- **`DEBUG` in [src/shared/debug.ts](../src/shared/debug.ts)** — `false` in prod; flip to `true` for live diagnosis, revert before shipping.
 
-## Known deferred red-team findings
+## Noise
 
-Tradeoffs we chose, not oversights:
-
-- **No CAS on `chrome.storage.local` read-modify-write.** Concurrent ticks + UI writes can clobber each other. Mitigated by `singleFlight`, not eliminated. A per-key lock is the real fix if this ever bites in production. Window is now ~10× wider since `checkFastBucket` can hold the slot for 8+ seconds per refresh click.
-- **`lastUserSync` is written on forced syncs too.** An alarm tick shortly after a force-refresh will skip its sync. Intentional: cooldown measures work done, not intent. UX sharper now that `toMonitored` baselines empty — delayed syncs mean in-flight conversations go un-surfaced for up to 30 min.
-- **Sidepanel refreshes on every `storage.local` change** including `lastTick`. Message/CPU churn, not a request storm. Amplified by `checkFastBucket` which can fire up to 15 `replies` writes per refresh.
-- **No per-scan overall request budget.** Individual caps bound worst case; nothing aborts mid-scan if HN is slow and retries compound.
-- **`__hnswered` global ships in the production bundle.** SW scope only, not web-reachable. Removing requires Vite build-mode flags — not worth it for MVP.
-- **`lastForceRefreshAt` does not survive SW suspension.** A spam-clicker who triggers MV3 suspension between clicks bypasses the 10s refresh throttle. Would need a persistent stamp in `chrome.storage.local` to close.
-- **`stoppedAtAge` in `syncUserSubmissions` trusts HN's newest-first ordering of `user.submitted`.** Not a documented contract. If HN ever reordered, we'd stop prematurely and silently miss recent items.
-- **`DEBUG` flag in `src/shared/debug.ts`.** Currently `false` for production-quiet builds. Flip to `true` when diagnosing live behavior; revert before shipping.
-
-## Noise to ignore
-
-- **IDE `@rollup/rollup-darwin-arm64` "Cannot find module" warning** in .svelte files — a known Svelte language-server bug with npm optional-deps. CLI build is unaffected. If the IDE keeps complaining: `rm -rf node_modules pnpm-lock.yaml && pnpm install`.
-- **Markdown table-pipe-spacing lint warnings** in README.md — cosmetic; tables render correctly.
+- IDE `@rollup/rollup-darwin-arm64` warning in .svelte files — Svelte language-server + npm optional-deps bug. CLI unaffected. Fix: `rm -rf node_modules pnpm-lock.yaml && pnpm install`.
+- Markdown table-pipe lints in `README.md` — cosmetic.
 
 ## Naming
 
-User-visible brand is **HNswered** (capital H and N). Internal identifiers stay lowercase: npm package name, alarm-key prefix, `globalThis.__hnswered` hook, `userDataDir` temp prefix, Vite plugin name. If a future clean-break rename happens, the alarm prefix is the only one with an upgrade cost.
+User-visible: **HNswered** (capital H, N). Internal IDs stay lowercase (npm name, `hnswered:` prefix, `__hnswered` hook, userDataDir temp prefix, Vite plugin). Alarm prefix is the only rename with upgrade cost.

@@ -1,30 +1,29 @@
 /**
  * Scenario: parallel runRefresh calls must coalesce into one slot of HN work.
  *
- * This is the regression test for the upcoming TODO #1 (Web Locks API)
- * refactor. Today's coalescing is implemented by the hand-rolled `singleFlight`
- * map + `runRefresh`'s forward-reference slot-swap dance in
- * src/background/index.ts. The Web Locks refactor will replace that machinery
- * with `navigator.locks.request('tick', { mode: 'exclusive' }, ...)`.
+ * Coalescing is provided by `navigator.locks.request(LOCK.TICK, ...)` in
+ * exclusive mode (see src/background/index.ts runRefresh). Two concurrent
+ * runRefresh calls queue on the same lock; when the second one reaches the
+ * body, the throttle check already rejects it into the lock-drain path.
  *
  * THE TAPE IS THE ASSERTION.
  *
  * The recorded tape contains exactly TWO refresh-flows worth of HN traffic:
  *   1. One auto-refresh kicked off by the user-change branch in set-config.
  *   2. One refresh from the parallel pair below — *coalesced into a single
- *      slot of work* by singleFlight (or, post-refactor, by the Web Lock).
+ *      slot of work* by the Web Lock.
  *
  * If coalescing ever breaks and the parallel pair actually executed two
- * separate refreshes, the second one would try to fetch
- * `/v0/user/<handle>.json` a third time. The transport's strict per-URL cursor
- * (transport.ts) throws TapeMiss on overrun, so the test fails loudly with a
- * clear "cursor exceeds N recorded calls" error instead of silently re-serving.
+ * separate refreshes, the second one would try to run Algolia searches again.
+ * The transport's strict per-URL cursor (transport.ts) throws TapeMiss on
+ * overrun, so the test fails loudly with a clear "cursor exceeds N recorded
+ * calls" error instead of silently re-serving.
  *
  * What the test does NOT cover:
  *   - Multi-driver-per-process scenarios (chrome shim + dynamic import are
- *     single-driver per process, by design — see driver.ts header). The Web
- *     Locks refactor's bonus benefit of serializing across multiple sidepanel
- *     contexts can't be exercised here without process orchestration.
+ *     single-driver per process, by design — see driver.ts header). The
+ *     benefit of serializing across multiple sidepanel contexts that Web
+ *     Locks gives us can't be exercised here without process orchestration.
  */
 import type { Driver } from '../driver.ts';
 
@@ -55,16 +54,16 @@ export const scenario = {
     // JS execution order under V8:
     //   - Call A starts. Body runs synchronously up to its first internal
     //     await: reads Date.now, computes sinceLastMs > threshold (unthrottled),
-    //     sets lastForceRefreshAt = now, seizes inFlight.tick = slot, returns
-    //     slot promise. Then control yields at the slot's first await.
+    //     sets lastForceRefreshAt = now, acquires LOCK.TICK exclusively.
+    //     Control yields at the lock's first internal await.
     //   - Call B starts. Body runs synchronously: reads the just-set
     //     lastForceRefreshAt, computes sinceLastMs = 0 (throttled), enters
-    //     `await runTick()` → singleFlight returns inFlight.tick → both await
-    //     the same slot.
+    //     the lock-drain path: `navigator.locks.request(LOCK.TICK, () => {})`
+    //     queues behind call A and resolves when call A releases.
     //
     // Tape captures only call A's traffic. If call B somehow executed
-    // separately, its `/v0/user/<handle>.json` fetch would overrun the tape's
-    // 2 recorded entries → TapeMiss → test fails with a clear diagnostic.
+    // separately, its Algolia searches would overrun the tape → TapeMiss →
+    // test fails with a clear diagnostic.
     await Promise.all([driver.bg.runRefresh(), driver.bg.runRefresh()]);
 
     await driver.expectGolden('after-coalesced-refresh');

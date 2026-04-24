@@ -1,4 +1,4 @@
-import { R as RETENTION } from './constants-tVfY01Ed.js';
+import { R as RETENTION } from './constants-BRcisosw.js';
 
 const DEV = false;
 
@@ -6504,16 +6504,19 @@ const api = {
   markAllRead: () => send({ kind: "mark-all-read" }),
   getConfig: () => send({ kind: "get-config" }),
   setConfig: (config) => send({ kind: "set-config", config }),
-  forceTick: () => send({ kind: "force-tick" }),
   forceRefresh: () => send({ kind: "force-refresh" }),
   clearRead: () => send({ kind: "clear-read" }),
   clearAllReplies: () => send({ kind: "clear-all-replies" }),
   getStorageStats: () => send({ kind: "get-storage-stats" }),
   inspect: () => send({ kind: "inspect" })
 };
+const RENDER_RELEVANT_KEYS = /* @__PURE__ */ new Set(["replies", "config"]);
 function onStorageChanged(cb) {
-  const listener = (_, area) => {
-    if (area === "local") cb();
+  const listener = (changes, area) => {
+    if (area !== "local") return;
+    const keys = Object.keys(changes).filter((k) => RENDER_RELEVANT_KEYS.has(k));
+    if (keys.length === 0) return;
+    cb(keys);
   };
   chrome.storage.onChanged.addListener(listener);
   return () => chrome.storage.onChanged.removeListener(listener);
@@ -6817,15 +6820,17 @@ delegate(['click']);
 
 var root_1$1 = from_html(`<option> </option>`);
 var root_2$1 = from_html(`<option> </option>`);
-var root_4$1 = from_html(`<button type="button" class="primary"> </button>`);
+var root_3$1 = from_html(`<option> </option>`);
 var root_5$1 = from_html(`<button type="button" class="primary"> </button>`);
-var root_3$1 = from_html(`<table class="kv"><tbody><tr><td>replies</td><td> </td></tr><tr><td>monitored</td><td> </td></tr><tr><td>bytes used</td><td> </td></tr></tbody></table> <div class="storage-actions"><!> <!></div>`, 1);
-var root_6$1 = from_html(`<div class="status">loading…</div>`);
+var root_6$1 = from_html(`<button type="button" class="primary"> </button>`);
+var root_4$1 = from_html(`<table class="kv"><tbody><tr><td>replies</td><td> </td></tr><tr><td>monitored</td><td> </td></tr><tr><td>bytes used</td><td> </td></tr></tbody></table> <div class="storage-actions"><!> <!></div>`, 1);
+var root_7 = from_html(`<div class="status">loading…</div>`);
 
 var root$1 = from_html(
-	`<div class="settings"><form><div class="field"><label for="hnUser">hn username</label> <input id="hnUser" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. dang"/></div> <div class="field"><label for="tick">poll every</label> <select id="tick"></select></div> <div class="field"><label for="retention">drop read replies after</label> <select id="retention"></select></div> <p class="hint">Each poll hits <code>/v0/updates.json</code> first and only fetches items that changed.
-      Background scans — daily for the past week, weekly for the past year — catch late replies
-      and prune read replies past the retention window.
+	`<div class="settings"><form><div class="field"><label for="hnUser">hn username</label> <input id="hnUser" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. dang"/></div> <div class="field"><label for="tick">poll every</label> <select id="tick"></select></div> <div class="field"><label for="backfill">catch up on replies from past</label> <select id="backfill"></select></div> <div class="field"><label for="retention">drop read replies after</label> <select id="retention"></select></div> <p class="hint">Each poll pulls HN's recent comment feed in one request and surfaces any that reply
+      to your posts or comments. A slower author-sync tracks items you've posted in the
+      last year and prunes read replies past the retention window. On first configure,
+      existing replies on your last week of activity are surfaced so you can catch up.
       Changing the username clears all stored replies so the new account starts fresh.</p> <button type="submit" class="primary"> </button></form> <div class="storage"><div class="section-label">storage</div> <!></div></div> <!>`,
 	1
 );
@@ -6839,6 +6844,7 @@ function Settings($$anchor, $$props) {
 
 	const initialTick = $$props.config.tickMinutes;
 	const initialRetention = $$props.config.retentionDays ?? 30;
+	const initialBackfill = $$props.config.backfillDays ?? 7;
 
 	// svelte-ignore state_referenced_locally
 	let hnUser = state(proxy($$props.config.hnUser));
@@ -6849,14 +6855,23 @@ function Settings($$anchor, $$props) {
 	// svelte-ignore state_referenced_locally
 	let retentionDays = state(proxy($$props.config.retentionDays ?? 30));
 
+	// svelte-ignore state_referenced_locally
+	let backfillDays = state(proxy($$props.config.backfillDays ?? 7));
+
 	let saving = state(false);
 	let stats = state(null);
 	let clearingRead = state(false);
 	let clearingAll = state(false);
 	let modal = state('none');
-	const dirty = user_derived(() => get(hnUser).trim() !== initialHnUser.trim() || get(tickMinutes) !== initialTick || get(retentionDays) !== initialRetention);
-	const intervals = [1, 5, 15, 30, 60];
+	const dirty = user_derived(() => get(hnUser).trim() !== initialHnUser.trim() || get(tickMinutes) !== initialTick || get(retentionDays) !== initialRetention || get(backfillDays) !== initialBackfill);
+
+	// Clamped at 30 so OVERLAP_MS (45m) ≥ AUTHOR_SYNC_MS (10m) + tickMinutes.
+	const intervals = [1, 5, 15, 30];
+
 	const retentions = [7, 14, 30, 60, 90, 365];
+
+	// Mirrors BACKFILL_DAY_OPTIONS in src/shared/constants.ts.
+	const backfills = [7, 30, 90];
 
 	async function loadStats() {
 		set(stats, await api.getStorageStats(), true);
@@ -6871,13 +6886,12 @@ function Settings($$anchor, $$props) {
 
 		try {
 			// Backend's set-config handler kicks off runRefresh on user-change and
-			// ensures alarms are reconciled. A follow-up force-tick here would race
-			// with that kickoff and either coalesce (best case) or seize the slot
-			// and skip the force-sync work (worst case). Let the backend do its job.
+			// ensures alarms are reconciled. No follow-up is needed here.
 			await api.setConfig({
 				hnUser: get(hnUser).trim(),
 				tickMinutes: get(tickMinutes),
-				retentionDays: get(retentionDays)
+				retentionDays: get(retentionDays),
+				backfillDays: get(backfillDays)
 			});
 		} finally {
 			set(saving, false);
@@ -6979,7 +6993,7 @@ function Settings($$anchor, $$props) {
 	var div_3 = sibling(div_2, 2);
 	var select_1 = sibling(child(div_3), 2);
 
-	each(select_1, 21, () => retentions, index, ($$anchor, n) => {
+	each(select_1, 21, () => backfills, index, ($$anchor, n) => {
 		var option_1 = root_2$1();
 		var text_1 = child(option_1);
 
@@ -6996,41 +7010,61 @@ function Settings($$anchor, $$props) {
 		append($$anchor, option_1);
 	});
 
-	var button = sibling(div_3, 4);
-	var text_2 = child(button);
+	var div_4 = sibling(div_3, 2);
+	var select_2 = sibling(child(div_4), 2);
 
-	var div_4 = sibling(form, 2);
-	var node = sibling(child(div_4), 2);
+	each(select_2, 21, () => retentions, index, ($$anchor, n) => {
+		var option_2 = root_3$1();
+		var text_2 = child(option_2);
+
+		var option_2_value = {};
+
+		template_effect(() => {
+			set_text(text_2, `${get(n) ?? ''} days`);
+
+			if (option_2_value !== (option_2_value = get(n))) {
+				option_2.value = (option_2.__value = get(n)) ?? '';
+			}
+		});
+
+		append($$anchor, option_2);
+	});
+
+	var button = sibling(div_4, 4);
+	var text_3 = child(button);
+
+	var div_5 = sibling(form, 2);
+	var node = sibling(child(div_5), 2);
 
 	{
 		var consequent_2 = ($$anchor) => {
-			var fragment_1 = root_3$1();
+			var fragment_1 = root_4$1();
 			var table = first_child(fragment_1);
 			var tbody = child(table);
 			var tr = child(tbody);
 			var td = sibling(child(tr));
-			var text_3 = child(td);
+			var text_4 = child(td);
 
 			var tr_1 = sibling(tr);
 			var td_1 = sibling(child(tr_1));
-			var text_4 = child(td_1);
+			var text_5 = child(td_1);
 
 			var tr_2 = sibling(tr_1);
 			var td_2 = sibling(child(tr_2));
-			var text_5 = child(td_2);
+			var text_6 = child(td_2);
 
-			var div_5 = sibling(table, 2);
-			var node_1 = child(div_5);
+			var div_6 = sibling(table, 2);
+			var node_1 = child(div_6);
 
 			{
 				var consequent = ($$anchor) => {
-					var button_1 = root_4$1();
-					var text_6 = child(button_1);
+					var button_1 = root_5$1();
+					var text_7 = child(button_1);
 
 					template_effect(() => {
 						button_1.disabled = get(clearingRead);
 
-						set_text(text_6, get(clearingRead)
+						set_text(text_7, get(clearingRead)
 							? 'clearing…'
 							: `clear ${get(stats).replyCount - get(stats).unreadCount} read`);
 					});
@@ -7048,12 +7082,12 @@ function Settings($$anchor, $$props) {
 
 			{
 				var consequent_1 = ($$anchor) => {
-					var button_2 = root_5$1();
-					var text_7 = child(button_2);
+					var button_2 = root_6$1();
+					var text_8 = child(button_2);
 
 					template_effect(() => {
 						button_2.disabled = get(clearingAll);
-						set_text(text_7, get(clearingAll) ? 'clearing…' : `clear all ${get(stats).replyCount}`);
+						set_text(text_8, get(clearingAll) ? 'clearing…' : `clear all ${get(stats).replyCount}`);
 					});
 
 					delegated('click', button_2, onClearAll);
@@ -7067,9 +7101,9 @@ function Settings($$anchor, $$props) {
 
 			template_effect(
 				($0) => {
-					set_text(text_3, `${get(stats).replyCount ?? ''} (${get(stats).unreadCount ?? ''} unread)`);
-					set_text(text_4, get(stats).monitoredCount);
-					set_text(text_5, `${$0 ?? ''} / 10 MB`);
+					set_text(text_4, `${get(stats).replyCount ?? ''} (${get(stats).unreadCount ?? ''} unread)`);
+					set_text(text_5, get(stats).monitoredCount);
+					set_text(text_6, `${$0 ?? ''} / 10 MB`);
 				},
 				[() => formatBytes(get(stats).bytesInUse)]
 			);
@@ -7078,9 +7112,9 @@ function Settings($$anchor, $$props) {
 		};
 
 		var alternate = ($$anchor) => {
-			var div_6 = root_6$1();
+			var div_7 = root_7();
 
-			append($$anchor, div_6);
+			append($$anchor, div_7);
 		};
 
 		if_block(node, ($$render) => {
@@ -7147,13 +7181,14 @@ function Settings($$anchor, $$props) {
 
 	template_effect(() => {
 		button.disabled = get(saving);
-		set_text(text_2, get(saving) ? 'saving…' : 'save');
+		set_text(text_3, get(saving) ? 'saving…' : 'save');
 	});
 
 	event('submit', form, save);
 	bind_value(input, () => get(hnUser), ($$value) => set(hnUser, $$value));
 	bind_select_value(select, () => get(tickMinutes), ($$value) => set(tickMinutes, $$value));
-	bind_select_value(select_1, () => get(retentionDays), ($$value) => set(retentionDays, $$value));
+	bind_select_value(select_1, () => get(backfillDays), ($$value) => set(backfillDays, $$value));
+	bind_select_value(select_2, () => get(retentionDays), ($$value) => set(retentionDays, $$value));
 	append($$anchor, fragment);
 
 	return pop($$exports);
@@ -7185,18 +7220,30 @@ function App($$anchor, $$props) {
 	let filter = state('unread');
 	let renderLimit = state(proxy(RETENTION.PAGE_SIZE));
 
-	async function refresh() {
-		const [r, c] = await Promise.all([api.listReplies(), api.getConfig()]);
+	async function refresh(opts = { replies: true, config: true }) {
+		const tasks = [];
 
-		set(replies, r, true);
-		set(config, c, true);
+		if (opts.replies) tasks.push(api.listReplies().then((r) => {
+			set(replies, r, true);
+		}));
+
+		if (opts.config) tasks.push(api.getConfig().then((c) => {
+			set(config, c, true);
+		}));
+
+		await Promise.all(tasks);
 		set(loading, false);
 	}
 
 	onMount(() => {
 		refresh();
 
-		const off = onStorageChanged(() => refresh());
+		const off = onStorageChanged((keys) => {
+			refresh({
+				replies: keys.includes('replies'),
+				config: keys.includes('config')
+			});
+		});
 
 		return off;
 	});
@@ -7485,4 +7532,4 @@ delegate(['click']);
 const target = document.getElementById("app");
 if (!target) throw new Error("#app not found");
 mount(App, { target });
-//# sourceMappingURL=sidepanel-DXq5Ga11.js.map
+//# sourceMappingURL=sidepanel-n6aHmg0T.js.map

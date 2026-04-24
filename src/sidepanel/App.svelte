@@ -15,16 +15,19 @@
   let filter: Filter = $state('unread');
   let renderLimit = $state(RETENTION.PAGE_SIZE);
 
-  async function refresh() {
-    const [r, c] = await Promise.all([api.listReplies(), api.getConfig()]);
-    replies = r;
-    config = c;
+  async function refresh(opts: { replies?: boolean; config?: boolean } = { replies: true, config: true }) {
+    const tasks: Promise<void>[] = [];
+    if (opts.replies) tasks.push(api.listReplies().then((r) => { replies = r; }));
+    if (opts.config) tasks.push(api.getConfig().then((c) => { config = c; }));
+    await Promise.all(tasks);
     loading = false;
   }
 
   onMount(() => {
     refresh();
-    const off = onStorageChanged(() => refresh());
+    const off = onStorageChanged((keys) => {
+      refresh({ replies: keys.includes('replies'), config: keys.includes('config') });
+    });
     return off;
   });
 

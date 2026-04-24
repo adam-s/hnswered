@@ -1,4 +1,4 @@
-import type { HNItem, HNUpdates, HNUser } from '../shared/types.ts';
+import type { HNItem, HNUser } from '../shared/types.ts';
 import { FETCH, HN_API } from '../shared/constants.ts';
 import { log, logErr } from '../shared/debug.ts';
 
@@ -36,15 +36,11 @@ async function fetchJSON<T>(url: string, attempt = 0): Promise<T> {
 }
 
 export interface HNClient {
-  updates(): Promise<HNUpdates>;
   user(id: string): Promise<HNUser | null>;
   item(id: number): Promise<HNItem | null>;
 }
 
 export const hnClient: HNClient = {
-  async updates() {
-    return fetchJSON<HNUpdates>(`${HN_API}/updates.json`);
-  },
   async user(id) {
     return fetchJSON<HNUser | null>(`${HN_API}/user/${encodeURIComponent(id)}.json`);
   },

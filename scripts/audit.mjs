@@ -132,9 +132,7 @@ async function snapshotUser({ user, ext, log }, runId) {
       id: m.id,
       type: m.type,
       submittedAt: m.submittedAt,
-      lastDescendants: m.lastDescendants ?? 0,
-      lastKidsCount: (m.lastKids ?? []).length,
-      lastKids: m.lastKids ?? [],
+      title: m.title,
     })),
     hnRequestsSoFar: ext.hnRequests.length,
   };

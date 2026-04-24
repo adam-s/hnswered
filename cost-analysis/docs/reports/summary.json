@@ -1,0 +1,350 @@
+{
+  "label": "full-01",
+  "stage": "full",
+  "started_at": "2026-04-23T18:46:38.529Z",
+  "finished_at": "2026-04-23T19:24:57.875Z",
+  "wall_ms": 2299346,
+  "inputs": {
+    "totalParents": 20000,
+    "concurrency": 14,
+    "ageDays": 180,
+    "types": [
+      "story",
+      "comment"
+    ],
+    "buckets": 12
+  },
+  "parents_sampled": 20016,
+  "parents_written": 19819,
+  "failures_count": 197,
+  "failures_sample": [
+    {
+      "parent_id": "47105902",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47105902&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "47106209",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47106209&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "47106253",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47106253&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46922143",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46922143&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46921950",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921950&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46922049",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46922049&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46921920",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921920&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46921936",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921936&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46921961",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921961&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46922005",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46922005&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46921892",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921892&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46921933",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921933&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46921907",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921907&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46921888",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921888&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46734701",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46734701&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46728808",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728808&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46728680",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728680&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46728720",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728720&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46728659",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728659&hitsPerPage=1000&page=0"
+    },
+    {
+      "parent_id": "46728713",
+      "error": "HTTP 403 after 5 retries: https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728713&hitsPerPage=1000&page=0"
+    }
+  ],
+  "total_requests": 46183,
+  "throttles_count": 3414,
+  "throttles_sample": [
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875097&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970042976
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875074&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043163
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875063&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043323
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875046&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043469
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875031&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043506
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875025&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043630
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874985&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043693
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874981&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043699
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874978&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043861
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874971&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970043879
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874937&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970044141
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874888&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970044177
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874887&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970044203
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874878&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 0,
+      "ts": 1776970044321
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875097&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 1,
+      "ts": 1776970044725
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875074&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 1,
+      "ts": 1776970044781
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875063&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 1,
+      "ts": 1776970044997
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875031&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 1,
+      "ts": 1776970045254
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47875025&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 1,
+      "ts": 1776970045337
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47874937&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 1,
+      "ts": 1776970045458
+    }
+  ],
+  "errors_count": 197,
+  "errors_sample": [
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47105902&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970481626
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47106209&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970482330
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=47106253&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970482490
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46922143&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970538466
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921950&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970538966
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46922049&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970539427
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921920&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970539878
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921936&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970539946
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921961&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970540103
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46922005&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970540160
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921892&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970540178
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921933&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970540530
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921907&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970541326
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46921888&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970542325
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46734701&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970602717
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728808&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970660030
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728680&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970660272
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728720&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970661232
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728659&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970661409
+    },
+    {
+      "url": "https://hn.algolia.com/api/v1/search?tags=comment&numericFilters=parent_id=46728713&hitsPerPage=1000&page=0",
+      "status": 403,
+      "attempt": 5,
+      "ts": 1776970661483
+    }
+  ],
+  "budget_exhausted": false
+}

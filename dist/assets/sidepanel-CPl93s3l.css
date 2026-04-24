@@ -150,6 +150,7 @@ a:hover {
   padding: 4px 10px 12px;
   flex: 1 1 auto;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
 }
 
@@ -206,6 +207,8 @@ a:hover {
   border-left: 2px solid var(--hn-rule);
   text-decoration: none;
   font-style: italic;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .reply .quoted:hover { border-left-color: var(--hn-gray-soft); }
 .reply .quoted:hover .quote-text { text-decoration: underline; }

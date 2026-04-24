@@ -31,6 +31,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createChromeShim, installChromeShim, type ChromeShim } from '../shim/chrome.ts';
+import { createNavigatorLocksShim, installNavigatorLocksShim } from '../shim/navigator-locks.ts';
 import { installTapeClock, type TapeClock } from './clock.ts';
 import { installFetchTransport, type Tape, type TransportHandle, emptyTape } from './transport.ts';
 import { expectGolden } from './snapshot.ts';
@@ -46,8 +47,6 @@ export interface BgHandle {
   };
   runTick(): Promise<void>;
   runRefresh(): Promise<void>;
-  runDaily(): Promise<void>;
-  runWeekly(): Promise<void>;
 }
 
 export interface Driver {
@@ -79,11 +78,12 @@ export interface StorageSnapshot {
   monitored: unknown;
   replies: unknown;
   timestamps: {
-    lastTick: number | null;
-    lastUserSync: number | null;
-    lastDailyScan: number | null;
-    lastWeeklyScan: number | null;
+    lastCommentPoll: number | null;
+    lastAuthorSync: number | null;
+    lastBackfillSweepAt: number | null;
+    backfillSweepFloor: number | null;
   };
+  backfillQueue: number[];
   // hnRequestCount is intentionally NOT in the snapshot — real-network retries
   // during recording inflate the count vs replay (zero-latency, zero retries),
   // making goldens unstable. Use `driver.hnRequests.length` directly in test
@@ -131,6 +131,12 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
   const shim: ChromeShim = createChromeShim({ clockSource: tapeClock.now });
   const uninstallShim = installChromeShim(shim);
 
+  // Step 2.5: navigator.locks shim — production uses Web Locks for tick/refresh
+  // serialization; Node has no navigator.locks. Single-process queueing only;
+  // the real API serializes across SW + every open sidepanel, but the harness
+  // drives one context at a time so per-name promise chaining is enough.
+  const uninstallLocks = installNavigatorLocksShim(createNavigatorLocksShim());
+
   // Step 3: fetch transport.
   let transport: TransportHandle;
   if (opts.mode === 'replay') {
@@ -138,6 +144,20 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
   } else {
     transport = installFetchTransport({ mode: 'record', tape });
   }
+
+  // Step 3.5: capture SW-side errors. The production `runTick` / `runRefresh`
+  // handlers catch-and-log-and-swallow, so a TapeMiss (or any other failure)
+  // leaves storage in its default/empty state — which happens to match the
+  // empty-state golden. Without this capture, harness:replay would pass on a
+  // genuine regression. We intercept both console.error (from the catch
+  // handlers) and the `logErr` path (which also hits console.error when
+  // DEBUG=true).
+  const capturedErrors: string[] = [];
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    capturedErrors.push(args.map((a) => (a instanceof Error ? a.message : String(a))).join(' '));
+    originalConsoleError(...args);
+  };
 
   // Step 4: dynamic import of unmodified background module.
   const bgUrl = new URL('../../src/background/index.ts', import.meta.url).href;
@@ -164,11 +184,12 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
       monitored: all.monitored ?? {},
       replies: all.replies ?? {},
       timestamps: {
-        lastTick: (all.lastTick as number | undefined) ?? null,
-        lastUserSync: (all.lastUserSync as number | undefined) ?? null,
-        lastDailyScan: (all.lastDailyScan as number | undefined) ?? null,
-        lastWeeklyScan: (all.lastWeeklyScan as number | undefined) ?? null,
+        lastCommentPoll: (all.lastCommentPoll as number | undefined) ?? null,
+        lastAuthorSync: (all.lastAuthorSync as number | undefined) ?? null,
+        lastBackfillSweepAt: (all.lastBackfillSweepAt as number | undefined) ?? null,
+        backfillSweepFloor: (all.backfillSweepFloor as number | undefined) ?? null,
       },
+      backfillQueue: (all.backfillQueue as number[] | undefined) ?? [],
     };
   }
 
@@ -189,6 +210,18 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
         // recording, catching any errors before they bite at golden-seeding.
         await (snap ? Promise.resolve(snap) : snapshot());
         return;
+      }
+      // Fail LOUDLY on any SW-side error captured during the scenario — the
+      // production code swallows errors from runTick/runRefresh to keep the
+      // alarm alive, so without this check a replay tape miss (or real
+      // regression) would leave storage in the empty-default state that
+      // happens to match the empty-default golden. Two failures look like
+      // success otherwise.
+      if (capturedErrors.length > 0) {
+        throw new Error(
+          `Harness captured SW-side error(s) during scenario "${opts.scenario}" step "${step}":\n` +
+          capturedErrors.map((e) => `  - ${e}`).join('\n'),
+        );
       }
       const s = snap ?? (await snapshot());
       expectGolden(opts.scenario, step, s);
@@ -212,9 +245,11 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
         // clock advance past an alarm boundary may read stale state.
         //
         // Workaround for scenarios that need to observe alarm-triggered work:
-        // after `clock.tickAsync`, await `bg.runTick()` — singleFlight will
-        // coalesce with the in-flight alarm-driven tick and resolve only when
-        // that work completes.
+        // after `clock.tickAsync`, await `bg.runRefresh()` (NOT runTick — runTick
+        // uses navigator.locks `ifAvailable: true` and skips when an alarm-driven
+        // tick is in flight). runRefresh acquires the lock exclusively and
+        // therefore queues behind the in-flight tick, resolving only after it
+        // completes. The throttle stamp keeps the refresh's own work cheap.
         await new Promise((r) => setImmediate(r));
         await shim.clock.pumpAlarms();
         await new Promise((r) => setImmediate(r));
@@ -226,7 +261,9 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
     tape,
     mode: opts.mode,
     async uninstall() {
+      console.error = originalConsoleError;
       transport.uninstall();
+      uninstallLocks();
       uninstallShim();
       tapeClock.uninstall();
       // Clear __hnswered so the single-driver-per-process check at the top of

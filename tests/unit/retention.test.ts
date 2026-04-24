@@ -44,7 +44,7 @@ test('pruneReplies drops orphaned READ replies but preserves orphaned UNREAD rep
   const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
-    await store.upsertMonitored({ id: 10, type: 'story', submittedAt: 0, lastKids: [] });
+    await store.upsertMonitored({ id: 10, type: 'story', submittedAt: 0 });
     await store.addReplies([
       mkReply({ id: 1, parentItemId: 10, read: false }),  // parent exists, unread → keep
       mkReply({ id: 2, parentItemId: 99, read: false }),  // parent missing, unread → KEEP (was dropped pre-fix)
@@ -112,21 +112,24 @@ test('clearAllReplies drops everything regardless of read state', async () => {
   } finally { off(); }
 });
 
-test('clearPerUserState wipes replies + monitored + lastUserSync but keeps config', async () => {
+test('clearPerUserState wipes replies + monitored + poll/sync timestamps but keeps config', async () => {
   const shim = createChromeShim();
   const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
     await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    await store.upsertMonitored({ id: 10, type: 'story', submittedAt: 0, lastKids: [] });
+    await store.upsertMonitored({ id: 10, type: 'story', submittedAt: 0 });
     await store.addReplies([mkReply({ id: 1, parentItemId: 10 })]);
-    await store.setTimestamp('lastUserSync', Date.now());
+    await store.setTimestamp('lastAuthorSync', Date.now());
+    await store.setTimestamp('lastCommentPoll', Date.now());
 
     await store.clearPerUserState();
 
     assert.equal(Object.keys(await store.getReplies()).length, 0);
     assert.equal(Object.keys(await store.getMonitored()).length, 0);
-    assert.equal((await store.getTimestamps()).lastUserSync, 0);
+    const ts = await store.getTimestamps();
+    assert.equal(ts.lastAuthorSync, 0);
+    assert.equal(ts.lastCommentPoll, 0);
     // Config untouched
     const cfg = await store.getConfig();
     assert.equal(cfg.hnUser, 'alice');

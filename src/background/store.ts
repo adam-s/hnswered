@@ -3,8 +3,10 @@ import type {
   MonitoredItem,
   Reply,
   StoreSchema,
+  TimestampKey,
 } from '../shared/types.ts';
-import { DEFAULT_CONFIG } from '../shared/constants.ts';
+import { BACKFILL_DAY_OPTIONS, DEFAULT_CONFIG, MAX_TICK_MINUTES } from '../shared/constants.ts';
+import { log } from '../shared/debug.ts';
 
 type Area = chrome.storage.StorageArea;
 
@@ -16,7 +18,10 @@ export interface Store {
   upsertMonitored(item: MonitoredItem): Promise<void>;
   removeMonitored(ids: number[]): Promise<void>;
   getReplies(): Promise<Record<string, Reply>>;
-  addReplies(replies: Reply[]): Promise<void>;
+  /** Idempotent (keyed by reply id). Returns the number of NEW rows written
+   *  — duplicates from a prior call report 0. Callers log this to prove
+   *  whether a fetch actually surfaced anything. */
+  addReplies(replies: Reply[]): Promise<number>;
   markRead(id: number): Promise<void>;
   markAllRead(): Promise<void>;
   getUnreadCount(): Promise<number>;
@@ -25,8 +30,10 @@ export interface Store {
   clearAllReplies(): Promise<number>;
   clearPerUserState(): Promise<void>;
   getBytesInUse(): Promise<number>;
-  getTimestamps(): Promise<Pick<StoreSchema, 'lastTick' | 'lastDailyScan' | 'lastWeeklyScan' | 'lastUserSync'>>;
-  setTimestamp(key: 'lastTick' | 'lastDailyScan' | 'lastWeeklyScan' | 'lastUserSync', ts: number): Promise<void>;
+  getTimestamps(): Promise<Pick<StoreSchema, TimestampKey>>;
+  setTimestamp(key: TimestampKey, ts: number): Promise<void>;
+  getBackfillQueue(): Promise<number[]>;
+  setBackfillQueue(queue: number[]): Promise<void>;
 }
 
 export function createStore(area: Area = chrome.storage.local): Store {
@@ -45,7 +52,19 @@ export function createStore(area: Area = chrome.storage.local): Store {
     },
     async setConfig(partial) {
       const current = await this.getConfig();
-      const next = { ...current, ...partial };
+      const merged = { ...current, ...partial };
+      // Defense-in-depth clamps — the UI dropdowns are the first line, but a
+      // legacy saved config (e.g. tickMinutes=60 from a prior build) or a
+      // crafted setConfig call could otherwise bypass invariants the poller
+      // depends on (OVERLAP_MS ≥ tickMinutes + AUTHOR_SYNC_MS) or hit the
+      // Algolia politeness cap.
+      const next = {
+        ...merged,
+        tickMinutes: Math.min(Math.max(1, merged.tickMinutes ?? DEFAULT_CONFIG.tickMinutes), MAX_TICK_MINUTES),
+        backfillDays: BACKFILL_DAY_OPTIONS.includes(merged.backfillDays as 7 | 30 | 90)
+          ? merged.backfillDays
+          : DEFAULT_CONFIG.backfillDays,
+      };
       await set('config', next);
       return next;
     },
@@ -70,10 +89,15 @@ export function createStore(area: Area = chrome.storage.local): Store {
     },
     async addReplies(newReplies) {
       const current = await this.getReplies();
+      const before = Object.keys(current).length;
       for (const r of newReplies) {
         if (!current[String(r.id)]) current[String(r.id)] = r;
       }
-      await set('replies', current);
+      const after = Object.keys(current).length;
+      const inserted = after - before;
+      log('store.addReplies', `incoming=${newReplies.length} inserted=${inserted} before=${before} after=${after}`);
+      if (inserted > 0) await set('replies', current);
+      return inserted;
     },
     async markRead(id) {
       const current = await this.getReplies();
@@ -153,9 +177,19 @@ export function createStore(area: Area = chrome.storage.local): Store {
       return n;
     },
     async clearPerUserState() {
-      // Used when hnUser changes — wipe stale replies, monitored items, and the
-      // sync-cooldown timestamp so the new user starts fresh.
-      await area.remove(['replies', 'monitored', 'lastUserSync']);
+      // Used when hnUser changes — wipe stale replies, monitored items, the
+      // sync/poll timestamps, AND the backfill queue (which references
+      // parent IDs belonging to the prior user). First-sync semantics kick
+      // in on the next tick.
+      await area.remove([
+        'replies',
+        'monitored',
+        'lastCommentPoll',
+        'lastAuthorSync',
+        'lastBackfillSweepAt',
+        'backfillSweepFloor',
+        'backfillQueue',
+      ]);
     },
     async getBytesInUse() {
       if (typeof area.getBytesInUse !== 'function') return 0;
@@ -171,16 +205,22 @@ export function createStore(area: Area = chrome.storage.local): Store {
       });
     },
     async getTimestamps() {
-      const res = (await area.get(['lastTick', 'lastDailyScan', 'lastWeeklyScan', 'lastUserSync'])) as Partial<StoreSchema>;
+      const res = (await area.get(['lastCommentPoll', 'lastAuthorSync', 'lastBackfillSweepAt', 'backfillSweepFloor'])) as Partial<StoreSchema>;
       return {
-        lastTick: res.lastTick ?? 0,
-        lastDailyScan: res.lastDailyScan ?? 0,
-        lastWeeklyScan: res.lastWeeklyScan ?? 0,
-        lastUserSync: res.lastUserSync ?? 0,
+        lastCommentPoll: res.lastCommentPoll ?? 0,
+        lastAuthorSync: res.lastAuthorSync ?? 0,
+        lastBackfillSweepAt: res.lastBackfillSweepAt ?? 0,
+        backfillSweepFloor: res.backfillSweepFloor ?? 0,
       };
     },
     async setTimestamp(key, ts) {
       await set(key, ts);
+    },
+    async getBackfillQueue() {
+      return get('backfillQueue', []);
+    },
+    async setBackfillQueue(queue) {
+      await set('backfillQueue', queue);
     },
   };
 }

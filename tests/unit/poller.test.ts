@@ -5,514 +5,998 @@ import { createChromeShim, installChromeShim } from '../shim/chrome.ts';
 import { createFakeHN } from '../shim/fake-hn.ts';
 import { createStore } from '../../src/background/store.ts';
 import {
-  checkFastBucket,
-  filterByAge,
-  newKidIds,
-  scanBucket,
-  syncUserSubmissions,
-  tick,
-  toMonitored,
-  toReply,
+  ageMs,
+  computeBackfillSinceMs,
+  drainOneBackfillItem,
+  maybeEnqueueBackfillSweep,
+  maybeSyncAuthor,
+  pollComments,
+  syncAuthor,
+  toMonitoredFromAuthorHit,
+  toReplyFromCommentHit,
 } from '../../src/background/poller.ts';
-import { BUCKET, DAY_MS } from '../../src/shared/constants.ts';
+import { AUTHOR_SYNC_MS, DAY_MS, DROP_AGE_MS, OVERLAP_MS } from '../../src/shared/constants.ts';
+import type { AlgoliaAuthorHit, AlgoliaCommentHit, MonitoredItem } from '../../src/shared/types.ts';
 
-test('newKidIds returns only ids not previously seen', () => {
-  assert.deepEqual(newKidIds([1, 2, 3], [1, 2, 3, 4, 5]), [4, 5]);
-  assert.deepEqual(newKidIds([], [1]), [1]);
-  assert.deepEqual(newKidIds([1, 2], []), []);
-  assert.deepEqual(newKidIds([1, 2], [1, 2]), []);
-});
+// Builders — keep tests legible.
 
-test('toMonitored rejects deleted, dead, and wrong-type items; baselines empty so existing kids are surfaced', () => {
-  assert.equal(toMonitored({ id: 1, type: 'story', deleted: true } as any), null);
-  assert.equal(toMonitored({ id: 1, type: 'story', dead: true } as any), null);
-  assert.equal(toMonitored({ id: 1, type: 'job' } as any), null);
-  const m = toMonitored({ id: 1, type: 'story', time: 100, kids: [2, 3], descendants: 5 } as any);
-  assert.equal(m?.id, 1);
-  assert.deepEqual(m?.lastKids, [], 'baseline empty, not snapshotted — next checkOne surfaces existing kids as new');
-  assert.equal(m?.lastDescendants, 0);
-});
-
-test('toReply skips deleted/dead and missing author', () => {
-  const parent = { id: 10, type: 'story' as const, submittedAt: 0, lastKids: [] };
-  assert.equal(toReply({ id: 1, deleted: true } as any, parent), null);
-  assert.equal(toReply({ id: 1, dead: true } as any, parent), null);
-  assert.equal(toReply({ id: 1, time: 5 } as any, parent), null);
-  const r = toReply({ id: 1, by: 'alice', text: 'hi', time: 5 } as any, parent, { title: 'my post' });
-  assert.equal(r?.author, 'alice');
-  assert.equal(r?.parentItemTitle, 'my post');
-  assert.equal(r?.read, false);
-});
-
-test('filterByAge buckets monitored items correctly', () => {
-  const now = 400 * DAY_MS;
-  const monitored = {
-    fresh: { id: 1, type: 'story' as const, submittedAt: now - 0.25 * DAY_MS, lastKids: [] }, // 6h old
-    midweek: { id: 2, type: 'story' as const, submittedAt: now - 3 * DAY_MS, lastKids: [] }, // 3d
-    tenDays: { id: 3, type: 'story' as const, submittedAt: now - 10 * DAY_MS, lastKids: [] }, // 10d
-    ancient: { id: 4, type: 'story' as const, submittedAt: now - 400 * DAY_MS, lastKids: [] }, // past year
+function commentHit(over: Partial<AlgoliaCommentHit> & { id: number; parent_id: number }): AlgoliaCommentHit {
+  const secondsNow = Math.floor(Date.now() / 1000);
+  return {
+    objectID: String(over.id),
+    created_at_i: over.created_at_i ?? secondsNow,
+    author: over.author ?? 'other',
+    comment_text: over.comment_text ?? `reply to ${over.parent_id}`,
+    parent_id: over.parent_id,
+    story_id: over.story_id,
   };
-  const daily = filterByAge(monitored, BUCKET.DAILY_MIN_AGE_MS, BUCKET.DAILY_MAX_AGE_MS, now);
-  assert.deepEqual(daily.map((m) => m.id).sort(), [2]);
-  const weekly = filterByAge(monitored, BUCKET.WEEKLY_MIN_AGE_MS, BUCKET.WEEKLY_MAX_AGE_MS, now);
-  assert.deepEqual(weekly.map((m) => m.id).sort(), [3]);
+}
+
+function authorStoryHit(over: Partial<AlgoliaAuthorHit> & { id: number; author: string }): AlgoliaAuthorHit {
+  const secondsNow = Math.floor(Date.now() / 1000);
+  return {
+    objectID: String(over.id),
+    created_at_i: over.created_at_i ?? secondsNow,
+    author: over.author,
+    _tags: ['story', `author_${over.author}`],
+    title: over.title ?? `story ${over.id}`,
+  };
+}
+
+function authorCommentHit(over: Partial<AlgoliaAuthorHit> & { id: number; author: string }): AlgoliaAuthorHit {
+  const secondsNow = Math.floor(Date.now() / 1000);
+  return {
+    objectID: String(over.id),
+    created_at_i: over.created_at_i ?? secondsNow,
+    author: over.author,
+    _tags: ['comment', `author_${over.author}`],
+    comment_text: over.comment_text ?? `authored by ${over.author}`,
+    story_id: over.story_id ?? 9999,
+  };
+}
+
+function monitoredStory(over: Partial<MonitoredItem> & { id: number }): MonitoredItem {
+  return {
+    id: over.id,
+    type: 'story',
+    submittedAt: over.submittedAt ?? Date.now(),
+    title: over.title ?? `story ${over.id}`,
+  };
+}
+
+function monitoredComment(over: Partial<MonitoredItem> & { id: number }): MonitoredItem {
+  return {
+    id: over.id,
+    type: 'comment',
+    submittedAt: over.submittedAt ?? Date.now(),
+    excerpt: over.excerpt ?? `excerpt of ${over.id}`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Pure-function tests
+// -----------------------------------------------------------------------------
+
+test('toMonitoredFromAuthorHit recognises stories and comments via _tags', () => {
+  const story = toMonitoredFromAuthorHit(authorStoryHit({ id: 100, author: 'alice' }));
+  assert.equal(story?.type, 'story');
+  assert.equal(story?.id, 100);
+  assert.equal(story?.title, 'story 100');
+
+  const comment = toMonitoredFromAuthorHit(authorCommentHit({ id: 200, author: 'alice' }));
+  assert.equal(comment?.type, 'comment');
+  assert.equal(comment?.id, 200);
+  assert.ok(comment?.excerpt?.includes('authored by alice'));
 });
 
-test('tick skips replies authored by the user themselves', async () => {
+test('toMonitoredFromAuthorHit rejects non-story/comment types', () => {
+  const pollHit: AlgoliaAuthorHit = {
+    objectID: '42',
+    created_at_i: 1_700_000_000,
+    author: 'alice',
+    _tags: ['poll', 'author_alice'],
+  };
+  assert.equal(toMonitoredFromAuthorHit(pollHit), null);
+});
+
+test('toMonitoredFromAuthorHit infers from field presence when _tags missing', () => {
+  const noTags: AlgoliaAuthorHit = {
+    objectID: '1',
+    created_at_i: 1_700_000_000,
+    author: 'alice',
+    title: 'headline',
+  };
+  assert.equal(toMonitoredFromAuthorHit(noTags)?.type, 'story');
+});
+
+test('toReplyFromCommentHit rejects hits with no author or non-numeric objectID', () => {
+  const parent = monitoredStory({ id: 1 });
+  assert.equal(
+    toReplyFromCommentHit({ ...commentHit({ id: 2, parent_id: 1 }), author: '' }, parent),
+    null,
+  );
+  assert.equal(
+    toReplyFromCommentHit({ ...commentHit({ id: 2, parent_id: 1 }), objectID: 'not-a-number' }, parent),
+    null,
+  );
+});
+
+// -----------------------------------------------------------------------------
+// pollComments
+// -----------------------------------------------------------------------------
+
+test('pollComments surfaces a direct reply on a monitored story', async () => {
   const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
+  const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
     const hn = createFakeHN();
-    const storyId = 100;
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [], descendants: 0 });
-    await store.upsertMonitored({
-      id: storyId,
-      type: 'story',
-      submittedAt: Date.now() - 60_000,
-      lastKids: [],
-      lastDescendants: 0,
-    });
-    hn.setUpdates({ items: [storyId], profiles: [] });
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [200, 201], descendants: 2 });
-    hn.seedItem({ id: 200, type: 'comment', by: 'alice', text: 'self-reply', time: 2, parent: storyId });
-    hn.seedItem({ id: 201, type: 'comment', by: 'bob', text: 'real reply', time: 2, parent: storyId });
+    await store.setConfig({ hnUser: 'alice' });
+    await store.upsertMonitored(monitoredStory({ id: 100 }));
+    hn.seedComment(commentHit({ id: 500, parent_id: 100, author: 'bob' }));
 
-    const res = await tick(hn, store);
+    const res = await pollComments(hn, store);
+
     assert.equal(res.newReplies, 1);
-    const replies = await store.getReplies();
-    assert.equal(Object.keys(replies).length, 1);
-    assert.equal(Object.values(replies)[0].author, 'bob');
-  } finally {
-    uninstall();
-  }
+    const replies = Object.values(await store.getReplies());
+    assert.equal(replies.length, 1);
+    assert.equal(replies[0].id, 500);
+    assert.equal(replies[0].author, 'bob');
+    assert.equal(replies[0].parentItemId, 100);
+    assert.equal(replies[0].parentItemTitle, 'story 100');
+  } finally { off(); }
 });
 
-test('cap on new-kid fetches leaves uncapped ids unmarked so the next tick catches them', async () => {
+test('pollComments filters self-replies (case-insensitive)', async () => {
   const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
+  const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
     const hn = createFakeHN();
-    const storyId = 300;
-    await store.upsertMonitored({
-      id: storyId,
-      type: 'story',
-      submittedAt: Date.now() - 60_000,
-      lastKids: [],
-      lastDescendants: 0,
-    });
-    // Create 15 new kids — cap (MAX_REPLIES_PER_CHECK=10) should only fetch 10.
-    const kidIds = Array.from({ length: 15 }, (_, i) => 1000 + i);
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: kidIds, descendants: 15 });
-    for (const id of kidIds) {
-      hn.seedItem({ id, type: 'comment', by: `user${id}`, text: `reply ${id}`, time: 2, parent: storyId });
-    }
-    hn.setUpdates({ items: [storyId], profiles: [] });
+    await store.setConfig({ hnUser: 'Alice' });
+    await store.upsertMonitored(monitoredStory({ id: 100 }));
+    hn.seedComment(commentHit({ id: 501, parent_id: 100, author: 'alice' }));
+    hn.seedComment(commentHit({ id: 502, parent_id: 100, author: 'ALICE' }));
+    hn.seedComment(commentHit({ id: 503, parent_id: 100, author: 'bob' }));
 
-    const first = await tick(hn, store);
-    assert.equal(first.newReplies, 10, 'first tick fetches MAX_REPLIES_PER_CHECK');
+    const res = await pollComments(hn, store);
 
-    // A second tick (with the updates feed still flagging the story) should catch the remaining 5.
-    hn.setUpdates({ items: [storyId], profiles: [] });
-    const second = await tick(hn, store);
-    assert.equal(second.newReplies, 5, 'second tick catches the leftover 5');
-    const all = await store.getReplies();
-    assert.equal(Object.keys(all).length, 15, 'all 15 replies eventually captured');
-  } finally {
-    uninstall();
-  }
-});
-
-test('tick detects a new direct reply on a monitored story', async () => {
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-
-    const storyId = 100;
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, title: 'hello', kids: [], descendants: 0 });
-    await store.upsertMonitored({
-      id: storyId,
-      type: 'story',
-      submittedAt: Date.now() - DAY_MS,
-      lastKids: [],
-      lastDescendants: 0,
-    });
-
-    hn.setUpdates({ items: [storyId], profiles: [] });
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, title: 'hello', kids: [200], descendants: 1 });
-    hn.seedItem({ id: 200, type: 'comment', by: 'bob', text: 'nice post', time: 2, parent: storyId });
-
-    const res = await tick(hn, store);
     assert.equal(res.newReplies, 1);
-    assert.equal(res.itemsChecked, 1);
-    const replies = await store.getReplies();
-    assert.equal(Object.keys(replies).length, 1);
-    assert.equal(Object.values(replies)[0].author, 'bob');
-    const monitored = await store.getMonitored();
-    assert.deepEqual(monitored[String(storyId)].lastKids, [200]);
-  } finally {
-    uninstall();
-  }
+    const replies = Object.values(await store.getReplies());
+    assert.equal(replies[0].id, 503);
+    assert.equal(replies[0].author, 'bob');
+  } finally { off(); }
 });
 
-test('tick detects replies on deeply-nested leaf comments identically to top-level items', async () => {
-  // Proves the poller is blind to thread depth: it only inspects each monitored item's
-  // direct kids. A user's leaf comment buried N levels deep is treated exactly like their
-  // top-level story — both are first-class entries in user.submitted, and replies to
-  // either are detected by the same diff on `kids`.
+test('pollComments ignores hits whose parent is not monitored', async () => {
   const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5, retentionDays: 30 });
-    const hn = createFakeHN();
-
-    // Build a 6-level-deep thread: story(1) → c2 → c3 → c4 → c5 → alice-leaf(6).
-    // alice only authored the deepest node. HN's user.submitted returns [6].
-    const nowSec = Math.floor(Date.now() / 1000);
-    hn.seedUser({ id: 'alice', created: 0, karma: 1, submitted: [6] });
-    hn.seedItem({ id: 1, type: 'story',   by: 'zed',   time: nowSec - 100, kids: [2] });
-    hn.seedItem({ id: 2, type: 'comment', by: 'yasmin', time: nowSec - 90, kids: [3], parent: 1 });
-    hn.seedItem({ id: 3, type: 'comment', by: 'xander', time: nowSec - 80, kids: [4], parent: 2 });
-    hn.seedItem({ id: 4, type: 'comment', by: 'willa',  time: nowSec - 70, kids: [5], parent: 3 });
-    hn.seedItem({ id: 5, type: 'comment', by: 'victor', time: nowSec - 60, kids: [6], parent: 4 });
-    hn.seedItem({ id: 6, type: 'comment', by: 'alice',  time: nowSec - 50, kids: [],  parent: 5 });
-
-    // Sync picks up the leaf comment regardless of its depth.
-    const added = await syncUserSubmissions(hn, store, 'alice');
-    assert.equal(added, 1, 'leaf comment added to monitored');
-    const monitored = await store.getMonitored();
-    assert.ok(monitored['6'], 'monitored contains the deep leaf');
-    assert.deepEqual(monitored['6'].lastKids, [], 'baseline captures current (empty) kids');
-
-    // Someone replies directly to alice's deep leaf comment.
-    hn.seedItem({ id: 7, type: 'comment', by: 'bob', text: 'deeply thoughtful reply', time: nowSec - 10, parent: 6 });
-    hn.seedItem({ id: 6, type: 'comment', by: 'alice',  time: nowSec - 50, kids: [7],  parent: 5 });
-    hn.setUpdates({ items: [6], profiles: [] });
-
-    const res = await tick(hn, store);
-    assert.equal(res.newReplies, 1, 'new reply on deep leaf detected');
-    const replies = await store.getReplies();
-    const r = Object.values(replies)[0];
-    assert.equal(r.author, 'bob');
-    assert.equal(r.parentItemId, 6);
-    assert.equal(r.parentAuthor, 'alice', 'parent excerpt context captured');
-  } finally {
-    uninstall();
-  }
-});
-
-test('tick does nothing when updates does not mention monitored items', async () => {
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    await store.upsertMonitored({
-      id: 1,
-      type: 'story',
-      submittedAt: Date.now() - DAY_MS,
-      lastKids: [],
-    });
-    hn.setUpdates({ items: [999], profiles: [] });
-    const res = await tick(hn, store);
-    assert.equal(res.newReplies, 0);
-    assert.equal(res.itemsChecked, 0);
-    assert.equal(hn.counts().item, 0);
-    assert.equal(hn.counts().updates, 1);
-  } finally {
-    uninstall();
-  }
-});
-
-test('tick skips when no user configured', async () => {
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
+  const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
     const hn = createFakeHN();
-    const res = await tick(hn, store);
+    await store.setConfig({ hnUser: 'alice' });
+    await store.upsertMonitored(monitoredStory({ id: 100 }));
+    hn.seedComment(commentHit({ id: 600, parent_id: 9999, author: 'bob' }));
+    hn.seedComment(commentHit({ id: 601, parent_id: 8888, author: 'carol' }));
+    hn.seedComment(commentHit({ id: 602, parent_id: 100, author: 'dan' }));
+
+    const res = await pollComments(hn, store);
+
+    assert.equal(res.newReplies, 1);
+    const replies = Object.values(await store.getReplies());
+    assert.equal(replies.length, 1);
+    assert.equal(replies[0].id, 602);
+  } finally { off(); }
+});
+
+test('pollComments dedupes on repeat calls via addReplies idempotency', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice' });
+    await store.upsertMonitored(monitoredStory({ id: 100 }));
+    hn.seedComment(commentHit({ id: 700, parent_id: 100, author: 'bob' }));
+
+    await pollComments(hn, store);
+    await pollComments(hn, store);
+
+    const replies = Object.values(await store.getReplies());
+    assert.equal(replies.length, 1, 'duplicate poll must not duplicate the reply');
+  } finally { off(); }
+});
+
+test('pollComments skips when there is no hnUser or no monitored items', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+
+    let res = await pollComments(hn, store);
     assert.equal(res.skipped, true);
     assert.equal(res.reason, 'no-user');
-    assert.equal(hn.counts().total, 0);
-  } finally {
-    uninstall();
-  }
+
+    await store.setConfig({ hnUser: 'alice' });
+    res = await pollComments(hn, store);
+    assert.equal(res.skipped, true);
+    assert.equal(res.reason, 'no-monitored');
+  } finally { off(); }
 });
 
-test('syncUserSubmissions pulls items newer than 1yr and stops at older ones', async () => {
+test('pollComments hydrates comment-parent excerpt on replies', async () => {
   const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
+  const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
     const hn = createFakeHN();
-    // Poller uses real Date.now() not the shim clock, so seed relative to wall time.
-    const nowSec = Math.floor(Date.now() / 1000);
-    hn.seedUser({ id: 'alice', created: 0, karma: 100, submitted: [3, 2, 1] });
-    hn.seedItem({ id: 3, type: 'story', by: 'alice', time: nowSec - 60, kids: [], title: 'recent' });
-    hn.seedItem({ id: 2, type: 'story', by: 'alice', time: nowSec - 86400 * 30, kids: [] });
-    hn.seedItem({ id: 1, type: 'story', by: 'alice', time: nowSec - 86400 * 400, kids: [] });
+    await store.setConfig({ hnUser: 'alice' });
+    await store.upsertMonitored(monitoredComment({ id: 300, excerpt: 'my earlier thought' }));
+    hn.seedComment(commentHit({ id: 800, parent_id: 300, author: 'bob', comment_text: 'great point' }));
 
-    const added = await syncUserSubmissions(hn, store, 'alice');
-    assert.equal(added, 2, 'should add 2 items younger than 1yr and stop at the old one');
+    await pollComments(hn, store);
+
+    const replies = Object.values(await store.getReplies());
+    assert.equal(replies[0].parentExcerpt, 'my earlier thought');
+    assert.equal(replies[0].parentItemTitle, undefined);
+  } finally { off(); }
+});
+
+// -----------------------------------------------------------------------------
+// syncAuthor
+// -----------------------------------------------------------------------------
+
+test('syncAuthor adds newly-authored stories and comments to monitored', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice' });
+    hn.seedAuthorItem('alice', authorStoryHit({ id: 1000, author: 'alice', title: 'my story' }));
+    hn.seedAuthorItem('alice', authorCommentHit({ id: 1001, author: 'alice' }));
+
+    const added = await syncAuthor(hn, store);
+
+    assert.equal(added, 2);
     const monitored = await store.getMonitored();
-    assert.ok(monitored['3']);
-    assert.ok(monitored['2']);
-    assert.equal(monitored['1'], undefined);
-  } finally {
-    uninstall();
-  }
+    assert.equal(monitored['1000']?.type, 'story');
+    assert.equal(monitored['1000']?.title, 'my story');
+    assert.equal(monitored['1001']?.type, 'comment');
+  } finally { off(); }
 });
 
-test('sync-then-checkFastBucket surfaces pre-existing direct kids even when updates.items is empty', async () => {
-  // Regression: a user configuring their HN handle for the first time should see the
-  // replies already sitting on their posts. Two bugs conspired pre-fix:
-  //   (1) toMonitored baselined lastKids = current, silencing everything.
-  //   (2) tick only checks items flagged by /v0/updates.json, which routinely misses
-  //       low-traffic items. So even with fix (1), tick alone couldn't see them.
-  // This test deliberately sets updates.items=[] to prove checkFastBucket (called by
-  // runRefresh) surfaces the replies — not tick.
+test('syncAuthor drops items older than DROP_AGE_MS', async () => {
   const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    const nowSec = Math.floor(Date.now() / 1000);
-    const storyId = 500;
-    hn.seedUser({ id: 'alice', created: 0, karma: 100, submitted: [storyId] });
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: nowSec - 60, kids: [501, 502, 503], descendants: 3, title: 'hot take' });
-    hn.seedItem({ id: 501, type: 'comment', by: 'bob',     time: nowSec - 50, parent: storyId, text: 'nice' });
-    hn.seedItem({ id: 502, type: 'comment', by: 'charlie', time: nowSec - 40, parent: storyId, text: 'disagree' });
-    hn.seedItem({ id: 503, type: 'comment', by: 'dan',     time: nowSec - 30, parent: storyId, text: 'source?' });
-
-    await syncUserSubmissions(hn, store, 'alice');
-    hn.setUpdates({ items: [], profiles: [] }); // story is NOT in updates feed
-    const tickRes = await tick(hn, store);
-    assert.equal(tickRes.newReplies, 0, 'tick alone cannot surface — story not in updates.items');
-
-    const fastRes = await checkFastBucket(hn, store);
-    assert.equal(fastRes.newReplies, 3, 'checkFastBucket surfaces all 3 existing top-level comments');
-    const replies = await store.getReplies();
-    assert.equal(Object.keys(replies).length, 3);
-    assert.deepEqual(Object.values(replies).map((r) => r.author).sort(), ['bob', 'charlie', 'dan']);
-  } finally {
-    uninstall();
-  }
-});
-
-test('checkOne self-reply filter is case-insensitive', async () => {
-  // Regression: pre-fix, strict-equality comparison meant a user configured as "Alice"
-  // would NOT self-filter replies authored as "alice" (HN canonical). Lowercase both
-  // sides before comparing.
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'Alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    const storyId = 700;
-    await store.upsertMonitored({
-      id: storyId,
-      type: 'story',
-      submittedAt: Date.now() - 60_000,
-      lastKids: [],
-      lastDescendants: 0,
-    });
-    hn.seedItem({ id: storyId, type: 'story', by: 'Alice', time: 1, kids: [701, 702], descendants: 2 });
-    hn.seedItem({ id: 701, type: 'comment', by: 'alice', time: 2, parent: storyId, text: 'self-reply canonical-case' });
-    hn.seedItem({ id: 702, type: 'comment', by: 'bob',   time: 2, parent: storyId, text: 'real reply' });
-    hn.setUpdates({ items: [storyId], profiles: [] });
-
-    const res = await tick(hn, store);
-    assert.equal(res.newReplies, 1, 'alice (lowercase) is recognized as self despite config Alice');
-    const replies = await store.getReplies();
-    assert.equal(Object.values(replies)[0].author, 'bob');
-  } finally {
-    uninstall();
-  }
-});
-
-test('checkFastBucket surfaces replies on items that are NOT in /v0/updates.json', async () => {
-  // Regression: HN's updates feed is a narrow snapshot (52ish items at a time).
-  // A monitored story that just got its first reply is often absent from it, so the
-  // updates-filtered tick misses the reply entirely. Force-refresh must bypass that
-  // gate and call checkOne directly on all fast-bucket items.
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    const storyId = 600;
-    await store.upsertMonitored({
-      id: storyId,
-      type: 'story',
-      submittedAt: Date.now() - 30 * 60_000, // 30 minutes old → fast bucket
-      lastKids: [],
-      lastDescendants: 0,
-    });
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [700], descendants: 1 });
-    hn.seedItem({ id: 700, type: 'comment', by: 'bob', time: 2, parent: storyId, text: 'first reply' });
-    // Deliberately empty: updates.json does NOT flag this story.
-    hn.setUpdates({ items: [], profiles: [] });
-
-    // Plain tick would miss it.
-    const tickRes = await tick(hn, store);
-    assert.equal(tickRes.newReplies, 0, 'tick is correctly gated by updates.items');
-
-    // Force-refresh path catches it.
-    const refreshRes = await checkFastBucket(hn, store);
-    assert.equal(refreshRes.newReplies, 1);
-    assert.equal(refreshRes.itemsChecked, 1);
-    const replies = await store.getReplies();
-    assert.equal(Object.values(replies)[0].author, 'bob');
-  } finally {
-    uninstall();
-  }
-});
-
-test('checkFastBucket excludes items older than FAST_MAX_AGE_MS', async () => {
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    // One fresh, one older than a week — only the fresh one should be checked.
-    await store.upsertMonitored({ id: 10, type: 'story', submittedAt: Date.now() - 60_000, lastKids: [], lastDescendants: 0 });
-    await store.upsertMonitored({ id: 11, type: 'story', submittedAt: Date.now() - 10 * DAY_MS, lastKids: [], lastDescendants: 0 });
-    hn.seedItem({ id: 10, type: 'story', by: 'alice', time: 1, kids: [], descendants: 0 });
-    hn.seedItem({ id: 11, type: 'story', by: 'alice', time: 1, kids: [], descendants: 0 });
-
-    const res = await checkFastBucket(hn, store);
-    assert.equal(res.itemsChecked, 1, 'only the sub-week item is checked');
-  } finally {
-    uninstall();
-  }
-});
-
-test('tick skipIds prevents double-fetch when checkFastBucket already processed an item', async () => {
-  // Regression (H1): runRefresh calls checkFastBucket then tick. Items both in the
-  // fast bucket AND in /v0/updates.items would get fetched twice without skipIds —
-  // once by checkFastBucket (where it does real work) and once by tick (where it's
-  // redundant because the baseline is already current). Silent politeness violation.
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    const storyId = 800;
-    await store.upsertMonitored({
-      id: storyId,
-      type: 'story',
-      submittedAt: Date.now() - 60_000,
-      lastKids: [],
-      lastDescendants: 0,
-    });
-    hn.seedItem({ id: storyId, type: 'story', by: 'alice', time: 1, kids: [801], descendants: 1 });
-    hn.seedItem({ id: 801, type: 'comment', by: 'bob', time: 2, parent: storyId, text: 'hi' });
-    // Item appears in BOTH paths — fast bucket (by age) AND updates.items (explicitly flagged).
-    hn.setUpdates({ items: [storyId], profiles: [] });
-
-    const fastRes = await checkFastBucket(hn, store);
-    assert.deepEqual(fastRes.processedIds, [storyId], 'checkFastBucket reports what it processed');
-    const itemFetchesAfterFast = hn.counts().item;
-
-    const tickRes = await tick(hn, store, { skipIds: new Set(fastRes.processedIds) });
-    assert.equal(tickRes.itemsChecked, 0, 'tick skips items checkFastBucket already handled');
-    assert.equal(hn.counts().item, itemFetchesAfterFast, 'no additional item GETs from tick');
-  } finally {
-    uninstall();
-  }
-});
-
-test('set-config user-change forces sync even if a refresh just ran within the throttle window', async () => {
-  // Regression (M1): lastForceRefreshAt is module-global. Without the throttle reset in
-  // the set-config handler, a user who clicks refresh then changes their username within
-  // 10s would fall through to runTick (no force sync), and the new handle would never
-  // get baselined. This test exercises the poller-level invariant — user-change MUST
-  // be able to force a sync regardless of any prior click's throttle window.
-  // NOTE: the actual reset lives in index.ts; this test proves syncUserSubmissions
-  // itself honors {force:true} even if a previous sync happened recently.
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
+  const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
     const hn = createFakeHN();
-    const nowSec = Math.floor(Date.now() / 1000);
-    hn.seedUser({ id: 'newuser', created: 0, karma: 1, submitted: [900] });
-    hn.seedItem({ id: 900, type: 'story', by: 'newuser', time: nowSec - 60, kids: [], title: 'new' });
+    await store.setConfig({ hnUser: 'alice' });
+    const ancientSec = Math.floor((Date.now() - 2 * DROP_AGE_MS) / 1000);
+    hn.seedAuthorItem('alice', authorStoryHit({ id: 2000, author: 'alice', created_at_i: ancientSec }));
+    hn.seedAuthorItem('alice', authorStoryHit({ id: 2001, author: 'alice' }));
 
-    // Pretend a sync happened 1 second ago (well inside the 30-min cooldown).
-    await store.setTimestamp('lastUserSync', Date.now() - 1000);
-    // Non-forced call must be gated.
-    const gated = await syncUserSubmissions(hn, store, 'newuser');
-    assert.equal(gated, 0, 'non-forced sync within cooldown is gated');
-    // Forced call (as issued by user-change path) must proceed.
-    const forced = await syncUserSubmissions(hn, store, 'newuser', { force: true });
-    assert.equal(forced, 1, 'forced sync bypasses cooldown');
-  } finally {
-    uninstall();
-  }
-});
+    const added = await syncAuthor(hn, store);
 
-test('scanBucket daily pass prunes read replies past retention', async () => {
-  // Coverage gap: scanBucket's `if (stampKey === "lastDailyScan")` branch runs
-  // pruneReplies inline. Retention math is tested in retention.test.ts in isolation;
-  // this proves the daily-scan code path actually invokes it.
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5, retentionDays: 30 });
-    const hn = createFakeHN();
-    hn.seedUser({ id: 'alice', created: 0, karma: 0, submitted: [] });
-    const now = Date.now();
-    // A monitored item in the daily bucket (1d–7d).
-    await store.upsertMonitored({ id: 50, type: 'story', submittedAt: now - 3 * DAY_MS, lastKids: [], lastDescendants: 0 });
-    hn.seedItem({ id: 50, type: 'story', by: 'alice', time: 1, kids: [], descendants: 0 });
-    // Two replies: one fresh-read (keep), one read past retention (drop).
-    await store.addReplies([
-      { id: 51, parentItemId: 50, author: 'bob', text: 'recent', time: 0, read: true,  discoveredAt: now - 5 * DAY_MS },
-      { id: 52, parentItemId: 50, author: 'bob', text: 'stale',  time: 0, read: true,  discoveredAt: now - 60 * DAY_MS },
-    ]);
-
-    await scanBucket(hn, store, BUCKET.DAILY_MIN_AGE_MS, BUCKET.DAILY_MAX_AGE_MS, 'lastDailyScan');
-
-    const replies = await store.getReplies();
-    assert.deepEqual(Object.keys(replies).sort(), ['51'], 'stale read reply pruned, fresh read reply kept');
-  } finally {
-    uninstall();
-  }
-});
-
-test('scanBucket drops items older than 1yr from the monitored set', async () => {
-  const shim = createChromeShim();
-  const uninstall = installChromeShim(shim);
-  try {
-    const store = createStore(shim.storage.local);
-    await store.setConfig({ hnUser: 'alice', tickMinutes: 5 });
-    const hn = createFakeHN();
-    hn.seedUser({ id: 'alice', created: 0, karma: 0, submitted: [] });
-    await store.upsertMonitored({
-      id: 77,
-      type: 'story',
-      submittedAt: Date.now() - BUCKET.DROP_AGE_MS - 1,
-      lastKids: [],
-    });
-    await scanBucket(hn, store, BUCKET.WEEKLY_MIN_AGE_MS, BUCKET.WEEKLY_MAX_AGE_MS, 'lastWeeklyScan');
+    assert.equal(added, 1);
     const monitored = await store.getMonitored();
-    assert.equal(monitored['77'], undefined);
+    assert.equal(monitored['2000'], undefined);
+    assert.ok(monitored['2001']);
+  } finally { off(); }
+});
+
+test('syncAuthor records lastAuthorSync timestamp', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice' });
+    hn.seedAuthorItem('alice', authorStoryHit({ id: 3000, author: 'alice' }));
+
+    assert.equal((await store.getTimestamps()).lastAuthorSync, 0);
+    await syncAuthor(hn, store);
+    assert.ok((await store.getTimestamps()).lastAuthorSync > 0);
+  } finally { off(); }
+});
+
+test('syncAuthor does not overwrite an existing monitored entry', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice' });
+    await store.upsertMonitored(monitoredStory({ id: 4000, title: 'original title' }));
+    hn.seedAuthorItem('alice', authorStoryHit({ id: 4000, author: 'alice', title: 'REPLACED' }));
+
+    await syncAuthor(hn, store);
+
+    const monitored = await store.getMonitored();
+    assert.equal(monitored['4000']?.title, 'original title', 'existing entry preserved (idempotent add)');
+  } finally { off(); }
+});
+
+// Note: first-sync backfill is now handled by the dedicated backfill worker
+// (maybeEnqueueBackfillSweep + drainOneBackfillItem) rather than baked into
+// syncAuthor. See the "Backfill" test section near the bottom of this file.
+
+// -----------------------------------------------------------------------------
+// maybeSyncAuthor (cadence-gated)
+// -----------------------------------------------------------------------------
+
+test('maybeSyncAuthor runs on first call then gates until AUTHOR_SYNC_MS elapses', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice' });
+    hn.seedAuthorItem('alice', authorStoryHit({ id: 5000, author: 'alice' }));
+
+    const added1 = await maybeSyncAuthor(hn, store);
+    assert.equal(added1, 1);
+    assert.ok((await store.getTimestamps()).lastAuthorSync > 0);
+
+    // Call again immediately — must be gated.
+    hn.seedAuthorItem('alice', authorStoryHit({ id: 5001, author: 'alice' }));
+    const added2 = await maybeSyncAuthor(hn, store);
+    assert.equal(added2, 0, 'second call within AUTHOR_SYNC_MS must not run syncAuthor');
+    assert.equal((await store.getMonitored())['5001'], undefined);
+
+    // Simulate cadence elapsed.
+    await store.setTimestamp('lastAuthorSync', Date.now() - AUTHOR_SYNC_MS - 1000);
+    const added3 = await maybeSyncAuthor(hn, store);
+    assert.equal(added3, 1, 'after cadence elapsed, sync runs and picks up the new item');
+  } finally { off(); }
+});
+
+// -----------------------------------------------------------------------------
+// ageMs
+// -----------------------------------------------------------------------------
+
+test('ageMs reports milliseconds since submission', () => {
+  const now = 1_000_000;
+  const m = monitoredStory({ id: 1, submittedAt: now - 60_000 });
+  assert.equal(ageMs(m, now), 60_000);
+});
+
+// ===========================================================================
+// Backfill — "catch up after absence"
+//
+// Temporal-logic tests. The backfill worker has three moving parts:
+//
+//   1. computeBackfillSinceMs(now, lastBackfillSweepAt, backfillDays)
+//      = max(lastBackfillSweepAt, now - backfillDays*DAY_MS)
+//
+//   2. maybeEnqueueBackfillSweep(store, now) — enqueue items from monitored
+//      posted within the backfillDays window, newest-first, but ONLY when a
+//      "gap" is detected: `now - lastCommentPoll > OVERLAP_MS` (or
+//      lastCommentPoll == 0, meaning first install).
+//
+//   3. drainOneBackfillItem(client, store, now) — pop head, searchByParent
+//      with `since = computeBackfillSinceMs`, addReplies, persist shortened
+//      queue. When queue empties, set `lastBackfillSweepAt = now`.
+//
+// The invariant we're proving: **every reply posted during an absence to a
+// monitored item within the backfillDays window is surfaced**, nothing older
+// or outside the window is fetched, and re-triggers don't re-storm.
+// ===========================================================================
+
+// --- 1. computeBackfillSinceMs (pure) --------------------------------------
+
+test('computeBackfillSinceMs: first install → now - depth', () => {
+  const now = 10 * DAY_MS;
+  const since = computeBackfillSinceMs({ now, lastBackfillSweepAt: 0, backfillDays: 7 });
+  assert.equal(since, now - 7 * DAY_MS);
+});
+
+test('computeBackfillSinceMs: brief absence → lastBackfillSweepAt (gap only)', () => {
+  const now = 30 * DAY_MS;
+  const lastSweep = now - 3 * 60 * 60 * 1000; // 3 hours ago
+  const since = computeBackfillSinceMs({ now, lastBackfillSweepAt: lastSweep, backfillDays: 7 });
+  assert.equal(since, lastSweep, '3hr absence with 7d depth: since=lastSweep, not depth floor');
+});
+
+test('computeBackfillSinceMs: long absence exceeding depth → now - depth (depth caps)', () => {
+  const now = 100 * DAY_MS;
+  const lastSweep = now - 30 * DAY_MS; // 30 days ago
+  const since = computeBackfillSinceMs({ now, lastBackfillSweepAt: lastSweep, backfillDays: 7 });
+  assert.equal(since, now - 7 * DAY_MS, 'depth (7d) wins over lastSweep (30d ago)');
+});
+
+test('computeBackfillSinceMs: at exact boundary (lastSweep == now - depth)', () => {
+  const now = 50 * DAY_MS;
+  const lastSweep = now - 7 * DAY_MS;
+  const since = computeBackfillSinceMs({ now, lastBackfillSweepAt: lastSweep, backfillDays: 7 });
+  assert.equal(since, lastSweep, 'ties resolve to lastSweep (Math.max equal values)');
+});
+
+test('computeBackfillSinceMs: 90-day depth, 4-week absence → 4 weeks (gap)', () => {
+  const now = 200 * DAY_MS;
+  const lastSweep = now - 28 * DAY_MS;
+  const since = computeBackfillSinceMs({ now, lastBackfillSweepAt: lastSweep, backfillDays: 90 });
+  assert.equal(since, lastSweep, '28d < 90d depth → since=lastSweep');
+});
+
+// --- 2. maybeEnqueueBackfillSweep — gap-trigger + ordering -----------------
+
+test('enqueue: first install (lastCommentPoll=0) triggers and queues past-week items, DESC by submittedAt', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+    // Three items inside past week, one outside. Intentional interleaved IDs
+    // to distinguish ordering-by-submittedAt from ordering-by-id.
+    await store.setMonitored({
+      '1': monitoredStory({ id: 1, submittedAt: now - 3 * DAY_MS }),   // 3d old
+      '2': monitoredStory({ id: 2, submittedAt: now - 1 * DAY_MS }),   // 1d old (newest)
+      '3': monitoredStory({ id: 3, submittedAt: now - 6 * DAY_MS }),   // 6d old
+      '4': monitoredStory({ id: 4, submittedAt: now - 8 * DAY_MS }),   // 8d old — OUTSIDE
+    });
+
+    const n = await maybeEnqueueBackfillSweep(store, now);
+    assert.equal(n, 3, 'three items within depth; id=4 excluded');
+
+    const queue = await store.getBackfillQueue();
+    assert.deepEqual(queue, [2, 1, 3], 'DESC by submittedAt: 1d < 3d < 6d ago');
+  } finally { off(); }
+});
+
+test('enqueue: gap ≤ OVERLAP_MS after a successful poll → no-op (no re-storm)', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+    await store.setTimestamp('lastCommentPoll', now - 60 * 1000); // 1 min ago (< OVERLAP_MS)
+    // Pretend a prior sweep already completed so the "never-swept" trigger doesn't fire.
+    await store.setTimestamp('lastBackfillSweepAt', now - 60 * 1000);
+    await store.setMonitored({ '1': monitoredStory({ id: 1, submittedAt: now - 1 * DAY_MS }) });
+
+    const n = await maybeEnqueueBackfillSweep(store, now);
+    assert.equal(n, 0, 'back-to-back ticks never re-enqueue');
+    assert.deepEqual(await store.getBackfillQueue(), []);
+  } finally { off(); }
+});
+
+test('enqueue: gap > OVERLAP_MS triggers after the threshold', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+    // Just over the threshold — a tick that wakes up from a 46-min suspension.
+    await store.setTimestamp('lastCommentPoll', now - OVERLAP_MS - 60 * 1000);
+    await store.setMonitored({ '1': monitoredStory({ id: 1, submittedAt: now - 1 * DAY_MS }) });
+
+    const n = await maybeEnqueueBackfillSweep(store, now);
+    assert.equal(n, 1);
+  } finally { off(); }
+});
+
+test('enqueue: no-op while a sweep is in progress (queue non-empty)', async () => {
+  // Contract: maybeEnqueueBackfillSweep is a no-op when the queue is non-empty.
+  // Without this gate, drained items would be re-enqueued on every tick (they
+  // are still in monitored, and the dedupe against `existing` does not catch
+  // an item that was popped from the queue but not yet removed from monitored).
+  // Result: queue would stay pinned at ~original size, never draining.
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+
+    await store.setMonitored({
+      '10': monitoredStory({ id: 10, submittedAt: now - 4 * DAY_MS }),
+      '11': monitoredStory({ id: 11, submittedAt: now - 2 * DAY_MS }),
+    });
+    await store.setBackfillQueue([10]); // sweep already in progress
+
+    const n = await maybeEnqueueBackfillSweep(store, now);
+    assert.equal(n, 0, 'sweep in progress → no re-enqueue');
+
+    const queue = await store.getBackfillQueue();
+    assert.deepEqual(queue, [10], 'queue untouched — existing sweep drains to completion first');
+  } finally { off(); }
+});
+
+test('enqueue: no user, no monitored, or no-trigger — all no-ops', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const now = 100 * DAY_MS;
+    // No user
+    assert.equal(await maybeEnqueueBackfillSweep(store, now), 0);
+    // User set but monitored empty
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    assert.equal(await maybeEnqueueBackfillSweep(store, now), 0);
+    // Monitored has items OUTSIDE depth window → still no-op
+    await store.setMonitored({ '99': monitoredStory({ id: 99, submittedAt: now - 30 * DAY_MS }) });
+    assert.equal(await maybeEnqueueBackfillSweep(store, now), 0);
+    assert.deepEqual(await store.getBackfillQueue(), []);
+  } finally { off(); }
+});
+
+// --- 3. drainOneBackfillItem — windowed fetch + state progression ---------
+
+test('drain: queue empty → 0, no side effects', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const surfaced = await drainOneBackfillItem(hn, store, 100 * DAY_MS);
+    assert.equal(surfaced, 0);
+    assert.equal(hn.counts().searchByParent, 0);
+  } finally { off(); }
+});
+
+test('drain: pops head, calls searchByParent with computed since, surfaces replies', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+    const lastSweep = now - 3 * 60 * 60 * 1000; // 3h ago
+
+    await store.setTimestamp('lastBackfillSweepAt', lastSweep);
+    await store.setMonitored({ '7': monitoredStory({ id: 7, submittedAt: now - 2 * DAY_MS }) });
+    await store.setBackfillQueue([7]);
+
+    // Seed two replies: one OLDER than lastSweep (should be filtered by fake-hn
+    // since shim), one NEWER.
+    const oldSec = Math.floor((lastSweep - 1000) / 1000);
+    const newSec = Math.floor((now - 60_000) / 1000);
+    hn.seedParentChild(7, commentHit({ id: 101, parent_id: 7, created_at_i: oldSec, author: 'bob' }));
+    hn.seedParentChild(7, commentHit({ id: 102, parent_id: 7, created_at_i: newSec, author: 'carol' }));
+
+    const surfaced = await drainOneBackfillItem(hn, store, now);
+    assert.equal(surfaced, 1, 'only the reply newer than `since` is surfaced');
+    const replies = await store.getReplies();
+    assert.ok(replies['102'], 'newer reply stored');
+    assert.ok(!replies['101'], 'older reply NOT stored — filtered by Algolia since-filter');
+  } finally { off(); }
+});
+
+test('drain: filters out self-replies case-insensitively', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'Alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+
+    await store.setMonitored({ '5': monitoredStory({ id: 5, submittedAt: now - 1 * DAY_MS }) });
+    await store.setBackfillQueue([5]);
+
+    const s = Math.floor((now - 60_000) / 1000);
+    hn.seedParentChild(5, commentHit({ id: 201, parent_id: 5, created_at_i: s, author: 'ALICE' }));
+    hn.seedParentChild(5, commentHit({ id: 202, parent_id: 5, created_at_i: s, author: 'other' }));
+
+    const surfaced = await drainOneBackfillItem(hn, store, now);
+    assert.equal(surfaced, 1);
+    const replies = await store.getReplies();
+    assert.ok(replies['202']);
+    assert.ok(!replies['201'], 'self-reply filtered');
+  } finally { off(); }
+});
+
+test('drain: parent evicted since enqueue → silently drops, no Algolia call for missing parent', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+
+    await store.setMonitored({}); // parent 99 is NOT in monitored
+    await store.setBackfillQueue([99]);
+
+    const surfaced = await drainOneBackfillItem(hn, store, now);
+    assert.equal(surfaced, 0);
+    assert.deepEqual(await store.getBackfillQueue(), [], 'evicted parent removed from queue');
+    assert.equal(hn.counts().searchByParent, 0, 'no Algolia call wasted on evicted parent');
+  } finally { off(); }
+});
+
+test('drain: queue emptying advances lastBackfillSweepAt to now', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+
+    await store.setMonitored({ '1': monitoredStory({ id: 1, submittedAt: now - 1 * DAY_MS }) });
+    await store.setBackfillQueue([1]);
+    assert.equal((await store.getTimestamps()).lastBackfillSweepAt, 0);
+
+    await drainOneBackfillItem(hn, store, now);
+    assert.equal((await store.getTimestamps()).lastBackfillSweepAt, now,
+      'sweep complete → lastBackfillSweepAt = now');
+  } finally { off(); }
+});
+
+test('drain: queue not empty → lastBackfillSweepAt unchanged', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 100 * DAY_MS;
+
+    await store.setMonitored({
+      '1': monitoredStory({ id: 1, submittedAt: now - 1 * DAY_MS }),
+      '2': monitoredStory({ id: 2, submittedAt: now - 2 * DAY_MS }),
+    });
+    await store.setBackfillQueue([1, 2]);
+    await drainOneBackfillItem(hn, store, now);
+
+    assert.equal((await store.getTimestamps()).lastBackfillSweepAt, 0,
+      'one item remains — sweep not yet complete, timestamp not advanced');
+    assert.deepEqual(await store.getBackfillQueue(), [2]);
+  } finally { off(); }
+});
+
+// --- 4. Full scenario — user-requested temporal cases ---------------------
+
+async function setupScenario(opts: {
+  hnUser: string;
+  backfillDays: number;
+  now: number;
+  lastCommentPoll: number;
+  lastBackfillSweepAt?: number;
+  monitored: Array<{ id: number; ageMs: number }>;
+}) {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  const store = createStore(shim.storage.local);
+  await store.setConfig({ hnUser: opts.hnUser, backfillDays: opts.backfillDays });
+  await store.setTimestamp('lastCommentPoll', opts.lastCommentPoll);
+  if (opts.lastBackfillSweepAt !== undefined) {
+    await store.setTimestamp('lastBackfillSweepAt', opts.lastBackfillSweepAt);
+  }
+  const monitored: Record<string, MonitoredItem> = {};
+  for (const m of opts.monitored) {
+    monitored[String(m.id)] = monitoredStory({ id: m.id, submittedAt: opts.now - m.ageMs });
+  }
+  await store.setMonitored(monitored);
+  const hn = createFakeHN();
+  return { store, hn, cleanup: off };
+}
+
+test('scenario: off 3 hours, 1-week setting — enqueue past-week, since=3h-ago', async () => {
+  const now = 500 * DAY_MS;
+  const threeHrs = 3 * 60 * 60 * 1000;
+  const { store, hn, cleanup } = await setupScenario({
+    hnUser: 'alice', backfillDays: 7, now,
+    lastCommentPoll: now - threeHrs,
+    lastBackfillSweepAt: now - threeHrs, // prior sweep completed 3h ago
+    monitored: [
+      { id: 1, ageMs: 1 * DAY_MS },
+      { id: 2, ageMs: 6 * DAY_MS },
+      { id: 3, ageMs: 8 * DAY_MS }, // OUTSIDE 7d depth
+    ],
+  });
+  try {
+    await maybeEnqueueBackfillSweep(store, now);
+    const queue = await store.getBackfillQueue();
+    assert.deepEqual(queue, [1, 2], 'within depth, DESC by submittedAt; id=3 excluded');
+
+    // Seed a reply posted during the 3h gap (2h ago, NEW) and one posted 5h ago
+    // (before lastBackfillSweepAt; should not be returned by Algolia since-filter).
+    const inGapSec = Math.floor((now - 2 * 60 * 60 * 1000) / 1000);
+    const preSweepSec = Math.floor((now - 5 * 60 * 60 * 1000) / 1000);
+    hn.seedParentChild(1, commentHit({ id: 500, parent_id: 1, created_at_i: inGapSec, author: 'bob' }));
+    hn.seedParentChild(1, commentHit({ id: 501, parent_id: 1, created_at_i: preSweepSec, author: 'bob' }));
+
+    const surfaced = await drainOneBackfillItem(hn, store, now);
+    assert.equal(surfaced, 1, 'only the 2h-old reply (inside gap) surfaces');
+
+    // Verify the since was computed correctly (should be lastBackfillSweepAt, not depth-floor).
+    const logs = hn.log();
+    const call = logs.find((l) => l.includes('parent_id=1'));
+    assert.ok(call);
+    const sinceArg = Number((call ?? '').match(/since=(\d+)/)?.[1] ?? 0);
+    assert.equal(sinceArg, Math.floor((now - threeHrs) / 1000),
+      'since = lastBackfillSweepAt (3h ago), not depth floor');
+  } finally { cleanup(); }
+});
+
+test('scenario: off 2 days, 1-week setting — enqueue past-week, since=2d-ago (gap)', async () => {
+  const now = 500 * DAY_MS;
+  const twoDays = 2 * DAY_MS;
+  const { store, hn, cleanup } = await setupScenario({
+    hnUser: 'alice', backfillDays: 7, now,
+    lastCommentPoll: now - twoDays,
+    lastBackfillSweepAt: now - twoDays,
+    monitored: [
+      { id: 10, ageMs: 0.5 * DAY_MS },
+      { id: 20, ageMs: 3 * DAY_MS },
+      { id: 30, ageMs: 10 * DAY_MS }, // OUTSIDE 7d
+    ],
+  });
+  try {
+    await maybeEnqueueBackfillSweep(store, now);
+    assert.deepEqual(await store.getBackfillQueue(), [10, 20]);
+
+    hn.seedParentChild(10, commentHit({
+      id: 700, parent_id: 10, author: 'bob',
+      created_at_i: Math.floor((now - 1 * DAY_MS) / 1000), // 1 day ago (inside 2d gap)
+    }));
+    await drainOneBackfillItem(hn, store, now);
+
+    const logs = hn.log();
+    const sinceArg = Number(logs.find((l) => l.includes('parent_id=10'))?.match(/since=(\d+)/)?.[1] ?? 0);
+    assert.equal(sinceArg, Math.floor((now - twoDays) / 1000),
+      '2d absence < 7d depth → since = 2d ago');
+  } finally { cleanup(); }
+});
+
+test('scenario: off 4 weeks, 1-week setting — enqueue past-WEEK only, since=7d-ago (depth caps)', async () => {
+  const now = 500 * DAY_MS;
+  const fourWeeks = 28 * DAY_MS;
+  const { store, hn, cleanup } = await setupScenario({
+    hnUser: 'alice', backfillDays: 7, now,
+    lastCommentPoll: now - fourWeeks,
+    lastBackfillSweepAt: now - fourWeeks,
+    monitored: [
+      { id: 1, ageMs: 3 * DAY_MS },  // within week
+      { id: 2, ageMs: 6 * DAY_MS },  // within week (edge)
+      { id: 3, ageMs: 14 * DAY_MS }, // week 2 — user said weeks 2+ are ignored
+      { id: 4, ageMs: 21 * DAY_MS }, // week 3 — ignored
+    ],
+  });
+  try {
+    const n = await maybeEnqueueBackfillSweep(store, now);
+    assert.equal(n, 2, 'only the two past-week items; older weeks ignored');
+    assert.deepEqual(await store.getBackfillQueue(), [1, 2]);
+
+    hn.seedParentChild(1, commentHit({
+      id: 800, parent_id: 1, author: 'bob',
+      created_at_i: Math.floor((now - 5 * DAY_MS) / 1000),
+    }));
+    await drainOneBackfillItem(hn, store, now);
+    const logs = hn.log();
+    const sinceArg = Number(logs.find((l) => l.includes('parent_id=1'))?.match(/since=(\d+)/)?.[1] ?? 0);
+    assert.equal(sinceArg, Math.floor((now - 7 * DAY_MS) / 1000),
+      'depth (7d) caps since — we never fetch older than depth');
+  } finally { cleanup(); }
+});
+
+test('scenario: off 4 weeks, 3-month setting — enqueue past 3mo, since=4-weeks-ago (gap wins)', async () => {
+  const now = 500 * DAY_MS;
+  const fourWeeks = 28 * DAY_MS;
+  const { store, hn, cleanup } = await setupScenario({
+    hnUser: 'alice', backfillDays: 90, now,
+    lastCommentPoll: now - fourWeeks,
+    lastBackfillSweepAt: now - fourWeeks,
+    monitored: [
+      { id: 1, ageMs: 10 * DAY_MS },
+      { id: 2, ageMs: 60 * DAY_MS },
+      { id: 3, ageMs: 85 * DAY_MS },
+      { id: 4, ageMs: 120 * DAY_MS }, // outside 90d
+    ],
+  });
+  try {
+    const n = await maybeEnqueueBackfillSweep(store, now);
+    assert.equal(n, 3);
+
+    hn.seedParentChild(2, commentHit({
+      id: 900, parent_id: 2, author: 'bob',
+      created_at_i: Math.floor((now - 10 * DAY_MS) / 1000),
+    }));
+    // Process each queue item. Order DESC: [1, 2, 3].
+    const logs: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      await drainOneBackfillItem(hn, store, now);
+      logs.push(...hn.log().slice(logs.length));
+    }
+    const sinceArg = Number(
+      hn.log().find((l) => l.includes('parent_id=2'))?.match(/since=(\d+)/)?.[1] ?? 0,
+    );
+    assert.equal(sinceArg, Math.floor((now - fourWeeks) / 1000),
+      '4w absence < 90d depth → since = 4w ago (the actual gap), not 90d');
+  } finally { cleanup(); }
+});
+
+test('scenario: full drain completes — queue empties, timestamp advances, subsequent tick does nothing', async () => {
+  const now = 500 * DAY_MS;
+  const { store, hn, cleanup } = await setupScenario({
+    hnUser: 'alice', backfillDays: 7, now,
+    lastCommentPoll: now - 2 * 60 * 60 * 1000,
+    lastBackfillSweepAt: now - 2 * 60 * 60 * 1000,
+    monitored: [
+      { id: 1, ageMs: 1 * DAY_MS },
+      { id: 2, ageMs: 2 * DAY_MS },
+      { id: 3, ageMs: 3 * DAY_MS },
+    ],
+  });
+  try {
+    await maybeEnqueueBackfillSweep(store, now);
+    assert.equal((await store.getBackfillQueue()).length, 3);
+
+    // Drip three ticks.
+    await drainOneBackfillItem(hn, store, now);
+    await drainOneBackfillItem(hn, store, now);
+    assert.equal((await store.getTimestamps()).lastBackfillSweepAt, now - 2 * 60 * 60 * 1000,
+      'not yet advanced — still one item in queue');
+    await drainOneBackfillItem(hn, store, now);
+    assert.equal((await store.getBackfillQueue()).length, 0);
+    assert.equal((await store.getTimestamps()).lastBackfillSweepAt, now,
+      'queue drained → advanced to now');
+
+    // Simulate a new tick 1 minute later. lastCommentPoll gets updated by pollComments
+    // in real flow; for this test we set it manually to prove the gap check.
+    const laterNow = now + 60 * 1000;
+    await store.setTimestamp('lastCommentPoll', laterNow);
+    const n = await maybeEnqueueBackfillSweep(store, laterNow + 1000);
+    assert.equal(n, 0, 'no gap → no re-enqueue');
+  } finally { cleanup(); }
+});
+
+test('scenario: back-to-back 1-min ticks never re-enqueue once steady-state', async () => {
+  const now = 500 * DAY_MS;
+  const { store, cleanup } = await setupScenario({
+    hnUser: 'alice', backfillDays: 7, now,
+    lastCommentPoll: now - 60 * 1000, // last tick was 1 min ago — steady state
+    lastBackfillSweepAt: now - 60 * 60 * 1000,
+    monitored: [{ id: 1, ageMs: 1 * DAY_MS }],
+  });
+  try {
+    assert.equal(await maybeEnqueueBackfillSweep(store, now), 0);
+    assert.equal(await maybeEnqueueBackfillSweep(store, now + 60_000), 0);
+    assert.equal(await maybeEnqueueBackfillSweep(store, now + 120_000), 0);
+  } finally { cleanup(); }
+});
+
+test('scenario: state persists across store re-creation (simulates SW suspension)', async () => {
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const now = 500 * DAY_MS;
+    // SW alive — enqueue.
+    {
+      const store = createStore(shim.storage.local);
+      await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+      await store.setMonitored({
+        '1': monitoredStory({ id: 1, submittedAt: now - 1 * DAY_MS }),
+        '2': monitoredStory({ id: 2, submittedAt: now - 2 * DAY_MS }),
+      });
+      await maybeEnqueueBackfillSweep(store, now);
+    }
+    // SW suspended, re-spawned — new store instance over same storage.
+    {
+      const store2 = createStore(shim.storage.local);
+      assert.deepEqual(await store2.getBackfillQueue(), [1, 2],
+        'queue survives store re-creation (chrome.storage.local persists)');
+    }
+  } finally { off(); }
+});
+
+test('scenario: re-drain same parent after sweep complete — since advances, Algolia filters old replies', async () => {
+  // Proves the full round-trip of the `since` cursor: after the first sweep
+  // completes, lastBackfillSweepAt=now, so a subsequent drain of the same
+  // parent queries Algolia with since=now and gets nothing (the reply we seeded
+  // is older than now). This guards the "don't re-storm identical requests"
+  // property — combined with addReplies idempotency, re-enqueues are cheap.
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const hn = createFakeHN();
+    await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
+    const now = 500 * DAY_MS;
+    await store.setMonitored({ '1': monitoredStory({ id: 1, submittedAt: now - 1 * DAY_MS }) });
+    hn.seedParentChild(1, commentHit({
+      id: 555, parent_id: 1, author: 'bob',
+      created_at_i: Math.floor((now - 60_000) / 1000),
+    }));
+
+    await store.setBackfillQueue([1]);
+    assert.equal(await drainOneBackfillItem(hn, store, now), 1);
+    assert.equal((await store.getTimestamps()).lastBackfillSweepAt, now);
+
+    // Second drain at the same `now` — since=now → no hits returned.
+    await store.setBackfillQueue([1]);
+    assert.equal(await drainOneBackfillItem(hn, store, now), 0, 'since=now filters everything');
+
+    const replies = await store.getReplies();
+    assert.equal(Object.keys(replies).length, 1, 'the one reply from the first drain remains');
+  } finally { off(); }
+});
+
+// -----------------------------------------------------------------------------
+// Algolia client pagination guard
+// -----------------------------------------------------------------------------
+// Production's searchByAuthor / searchByParent paginate up to MAX_PAGES=5 and
+// rely on `hits.length < ALGOLIA_HITS_PER_PAGE` to stop. The fake-HN shim
+// returns all seeded hits in one shot — so for a seed of <1000 hits, only
+// page 0 is ever fetched, making pagination logic untested by every other
+// test in this file. This test exercises the pagination branch directly.
+// -----------------------------------------------------------------------------
+
+import { algoliaClient } from '../../src/background/algolia-client.ts';
+import { ALGOLIA_HITS_PER_PAGE } from '../../src/shared/constants.ts';
+
+test('algolia-client: searchByParent paginates when a page is full (MAX_PAGES cap)', async () => {
+  // Intercept fetch with a scripted responder that returns exactly
+  // ALGOLIA_HITS_PER_PAGE hits on page 0 and 2 hits on page 1, then a short
+  // page on page 2 to prove the stop condition fires.
+  const realFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (url: string) => {
+    calls.push(url);
+    const pageMatch = url.match(/[&?]page=(\d+)/);
+    const page = pageMatch ? Number(pageMatch[1]) : 0;
+    const hitsCount = page === 0 ? ALGOLIA_HITS_PER_PAGE : page === 1 ? ALGOLIA_HITS_PER_PAGE : 3;
+    const hits = Array.from({ length: hitsCount }, (_, i) => ({
+      objectID: String(page * ALGOLIA_HITS_PER_PAGE + i),
+      created_at_i: 1_700_000_000,
+      author: 'bob',
+      comment_text: 'x',
+      parent_id: 42,
+    }));
+    return {
+      ok: true,
+      json: async () => ({ hits, nbPages: 1, page }), // nbPages=1 lie — must be ignored
+    } as Response;
+  }) as typeof fetch;
+  try {
+    const hits = await algoliaClient.searchByParent(42);
+    assert.equal(hits.length, ALGOLIA_HITS_PER_PAGE * 2 + 3,
+      'three pages fetched: 1000 + 1000 + 3 = 2003');
+    assert.equal(calls.length, 3, 'exactly three page requests');
+    // Prove first-page URL did NOT include &page=0 (byte-identical to pre-pagination shape).
+    assert.ok(!calls[0].includes('&page='), 'page 0 URL omits explicit page param');
+    assert.ok(calls[1].includes('&page=1'));
+    assert.ok(calls[2].includes('&page=2'));
   } finally {
-    uninstall();
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('algolia-client: searchByParent stops at MAX_PAGES=5 even if every page is full', async () => {
+  const realFetch = globalThis.fetch;
+  let callCount = 0;
+  globalThis.fetch = (async () => {
+    callCount++;
+    return {
+      ok: true,
+      json: async () => ({
+        hits: Array.from({ length: ALGOLIA_HITS_PER_PAGE }, (_, i) => ({
+          objectID: String(callCount * 1000 + i),
+          created_at_i: 1_700_000_000,
+          author: 'bob',
+          comment_text: 'x',
+          parent_id: 42,
+        })),
+        nbPages: 1,
+        page: callCount - 1,
+      }),
+    } as Response;
+  }) as typeof fetch;
+  try {
+    const hits = await algoliaClient.searchByParent(42);
+    assert.equal(callCount, 5, 'MAX_PAGES=5 cap enforced');
+    assert.equal(hits.length, ALGOLIA_HITS_PER_PAGE * 5);
+  } finally {
+    globalThis.fetch = realFetch;
   }
 });

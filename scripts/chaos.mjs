@@ -85,8 +85,9 @@ function mkMonitored(over) {
     id: over.id,
     type: over.type ?? 'story',
     submittedAt: over.submittedAt ?? Date.now() - DAY_MS,
-    lastKids: over.lastKids ?? [],
-    lastDescendants: over.lastDescendants ?? 0,
+    title: over.title,
+    excerpt: over.excerpt,
+    parentAuthor: over.parentAuthor,
   };
 }
 
@@ -106,7 +107,7 @@ function checkMonitoredShape(m) {
   for (const [key, item] of Object.entries(m ?? {})) {
     if (Number(key) !== item?.id) errs.push(`monitored key/id mismatch at ${key}`);
     if (!['story', 'comment'].includes(item?.type)) errs.push(`monitored[${key}] bad type`);
-    if (!Array.isArray(item?.lastKids)) errs.push(`monitored[${key}] lastKids not array`);
+    if (typeof item?.submittedAt !== 'number') errs.push(`monitored[${key}] submittedAt not number`);
     if (typeof item?.submittedAt !== 'number') errs.push(`monitored[${key}] submittedAt invalid`);
   }
   return errs;
@@ -228,10 +229,13 @@ async function retentionPrune(ext) {
   moves.push({ move: 'seeded 4 replies (2 old-read, 1 fresh-read, 1 old-unread)' });
 
   const before = await ext.send({ kind: 'get-storage-stats' });
-  await ext.send({ kind: 'force-daily-scan' });
+  // Retention pruning now rides on the syncAuthor cycle, which runs inside
+  // every force-refresh. Algolia will return 0 hits for the fake user, so
+  // this is just a cheap way to trigger the retention pass.
+  await ext.send({ kind: 'force-refresh' });
   const after = await ext.send({ kind: 'get-storage-stats' });
   moves.push({
-    move: 'force-daily-scan',
+    move: 'force-refresh (retention sweep)',
     before: before.data.replyCount,
     after: after.data.replyCount,
     droppedOldRead: before.data.replyCount - after.data.replyCount,
@@ -260,10 +264,13 @@ async function hardCapTrim(ext) {
   moves.push({ move: 'seeded 6000 read replies' });
 
   const before = await ext.send({ kind: 'get-storage-stats' });
-  await ext.send({ kind: 'force-daily-scan' });
+  // Retention pruning now rides on the syncAuthor cycle, which runs inside
+  // every force-refresh. Algolia will return 0 hits for the fake user, so
+  // this is just a cheap way to trigger the retention pass.
+  await ext.send({ kind: 'force-refresh' });
   const after = await ext.send({ kind: 'get-storage-stats' });
   moves.push({
-    move: 'force-daily-scan (hardCap)',
+    move: 'force-refresh (hardCap)',
     before: before.data.replyCount,
     after: after.data.replyCount,
   });

@@ -1,66 +1,94 @@
-import { F as FETCH, H as HN_API, D as DEFAULT_CONFIG, B as BUCKET, R as RETENTION, a as DAY_MS, A as ALARM } from './assets/constants-tVfY01Ed.js';
+import { A as ALGOLIA_HITS_PER_PAGE, F as FETCH, a as ALGOLIA_API, D as DEFAULT_CONFIG, B as BACKFILL_DAY_OPTIONS, M as MAX_TICK_MINUTES, b as DAY_MS, c as AUTHOR_SYNC_MS, O as OVERLAP_MS, d as DROP_AGE_MS, R as RETENTION, e as ALARM, L as LOCK } from './assets/constants-BRcisosw.js';
 
 function log(loc, msg, data) {
-  return;
+  const tail = "";
+  console.log(`${(/* @__PURE__ */ new Date()).toISOString()} [${loc}] ${msg}${tail}`);
 }
 function logErr(loc, msg, err) {
-  return;
+  const text = err instanceof Error ? err.message : String(err);
+  console.error(`${(/* @__PURE__ */ new Date()).toISOString()} [${loc}] ERR ${msg} err=${JSON.stringify(text)}`);
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep$1 = (ms) => new Promise((r) => setTimeout(r, ms));
 async function fetchJSON(url, attempt = 0) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH.TIMEOUT_MS);
   const t0 = Date.now();
+  log("algolia-client.fetchJSON", `GET attempt=${attempt} url=${url}`);
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
     const body = await res.json();
     const elapsed = Date.now() - t0;
-    const size = typeof body === "object" ? JSON.stringify(body).length : 0;
-    log("hn-client.fetchJSON", `OK attempt=${attempt} elapsedMs=${elapsed} bytes=${size} url=${url}`);
+    log("algolia-client.fetchJSON", `OK attempt=${attempt} elapsedMs=${elapsed} url=${url}`);
     return body;
   } catch (err) {
     if (attempt >= FETCH.MAX_RETRIES) {
+      logErr("algolia-client.fetchJSON", `EXHAUSTED url=${url}`, err);
       throw err;
     }
     const backoff = Math.min(
       FETCH.BACKOFF_BASE_MS * 2 ** attempt,
       FETCH.BACKOFF_MAX_MS
     );
-    await sleep(backoff);
+    log("algolia-client.fetchJSON", `retry attempt=${attempt} backoffMs=${backoff} url=${url}`);
+    await sleep$1(backoff);
     return fetchJSON(url, attempt + 1);
   } finally {
     clearTimeout(timer);
   }
 }
-const hnClient = {
-  async updates() {
-    return fetchJSON(`${HN_API}/updates.json`);
+const algoliaClient = {
+  async searchComments(sinceEpochSec) {
+    const url = `${ALGOLIA_API}/search_by_date?tags=comment&numericFilters=created_at_i%3E${sinceEpochSec}&hitsPerPage=${ALGOLIA_HITS_PER_PAGE}`;
+    const data = await fetchJSON(url);
+    log("algolia-client.searchComments", `got ${data.hits.length} hits nbPages=${data.nbPages} sinceSec=${sinceEpochSec}`);
+    return data.hits;
   },
-  async user(id) {
-    return fetchJSON(`${HN_API}/user/${encodeURIComponent(id)}.json`);
+  async searchByAuthor(user, sinceEpochSec) {
+    const tag = `author_${encodeURIComponent(user)}`;
+    const MAX_PAGES = 5;
+    async function paginate(kind) {
+      const out = [];
+      let page = 0;
+      while (page < MAX_PAGES) {
+        const pageParam = page === 0 ? "" : `&page=${page}`;
+        const url = `${ALGOLIA_API}/search_by_date?tags=${kind},${tag}&numericFilters=created_at_i%3E${sinceEpochSec}&hitsPerPage=${ALGOLIA_HITS_PER_PAGE}${pageParam}`;
+        const data = await fetchJSON(url);
+        for (const h of data.hits) out.push(h);
+        if (data.hits.length < ALGOLIA_HITS_PER_PAGE) break;
+        page++;
+        if (page < MAX_PAGES) await sleep$1(500);
+      }
+      if (page >= MAX_PAGES - 1) {
+        log("algolia-client.searchByAuthor", `MAX_PAGES=${MAX_PAGES} reached user=${user} kind=${kind} — possible truncation`);
+      }
+      return out;
+    }
+    const [stories, comments] = await Promise.all([paginate("story"), paginate("comment")]);
+    const all = [...stories, ...comments];
+    log("algolia-client.searchByAuthor", `user=${user} stories=${stories.length} comments=${comments.length} total=${all.length}`);
+    return all;
   },
-  async item(id) {
-    return fetchJSON(`${HN_API}/item/${id}.json`);
+  async searchByParent(parentId, sinceEpochSec) {
+    const out = [];
+    const nf = sinceEpochSec !== void 0 ? `parent_id=${parentId},created_at_i%3E${sinceEpochSec}` : `parent_id=${parentId}`;
+    const MAX_PAGES = 5;
+    const PAGE_DELAY_MS = 500;
+    let page = 0;
+    while (page < MAX_PAGES) {
+      const pageParam = page === 0 ? "" : `&page=${page}`;
+      const url = `${ALGOLIA_API}/search?tags=comment&numericFilters=${nf}&hitsPerPage=${ALGOLIA_HITS_PER_PAGE}${pageParam}`;
+      const data = await fetchJSON(url);
+      for (const h of data.hits) out.push(h);
+      if (data.hits.length < ALGOLIA_HITS_PER_PAGE) break;
+      page++;
+      if (page < MAX_PAGES) await sleep$1(PAGE_DELAY_MS);
+    }
+    log("algolia-client.searchByParent", `parent=${parentId} sinceSec=${sinceEpochSec ?? "none"} hits=${out.length}`);
+    return out;
   }
 };
-async function fetchItems(client, ids) {
-  log("hn-client.fetchItems", `start count=${ids.length} ids=${JSON.stringify(ids)}`);
-  const results = [];
-  for (const id of ids) {
-    const item = await client.item(id);
-    if (item) {
-      results.push(item);
-      if (item.deleted || item.dead) {
-        log("hn-client.fetchItems", `included-dead-or-deleted id=${id} deleted=${item.deleted} dead=${item.dead}`);
-      }
-    }
-    await sleep(FETCH.PER_REQUEST_DELAY_MS);
-  }
-  log("hn-client.fetchItems", `done requested=${ids.length} got=${results.length}`);
-  return results;
-}
 
 function createStore(area = chrome.storage.local) {
   async function get(key, fallback) {
@@ -77,7 +105,12 @@ function createStore(area = chrome.storage.local) {
     },
     async setConfig(partial) {
       const current = await this.getConfig();
-      const next = { ...current, ...partial };
+      const merged = { ...current, ...partial };
+      const next = {
+        ...merged,
+        tickMinutes: Math.min(Math.max(1, merged.tickMinutes ?? DEFAULT_CONFIG.tickMinutes), MAX_TICK_MINUTES),
+        backfillDays: BACKFILL_DAY_OPTIONS.includes(merged.backfillDays) ? merged.backfillDays : DEFAULT_CONFIG.backfillDays
+      };
       await set("config", next);
       return next;
     },
@@ -102,10 +135,15 @@ function createStore(area = chrome.storage.local) {
     },
     async addReplies(newReplies) {
       const current = await this.getReplies();
+      const before = Object.keys(current).length;
       for (const r of newReplies) {
         if (!current[String(r.id)]) current[String(r.id)] = r;
       }
-      await set("replies", current);
+      const after = Object.keys(current).length;
+      const inserted = after - before;
+      log("store.addReplies", `incoming=${newReplies.length} inserted=${inserted} before=${before} after=${after}`);
+      if (inserted > 0) await set("replies", current);
+      return inserted;
     },
     async markRead(id) {
       const current = await this.getReplies();
@@ -177,7 +215,15 @@ function createStore(area = chrome.storage.local) {
       return n;
     },
     async clearPerUserState() {
-      await area.remove(["replies", "monitored", "lastUserSync"]);
+      await area.remove([
+        "replies",
+        "monitored",
+        "lastCommentPoll",
+        "lastAuthorSync",
+        "lastBackfillSweepAt",
+        "backfillSweepFloor",
+        "backfillQueue"
+      ]);
     },
     async getBytesInUse() {
       if (typeof area.getBytesInUse !== "function") return 0;
@@ -193,16 +239,22 @@ function createStore(area = chrome.storage.local) {
       });
     },
     async getTimestamps() {
-      const res = await area.get(["lastTick", "lastDailyScan", "lastWeeklyScan", "lastUserSync"]);
+      const res = await area.get(["lastCommentPoll", "lastAuthorSync", "lastBackfillSweepAt", "backfillSweepFloor"]);
       return {
-        lastTick: res.lastTick ?? 0,
-        lastDailyScan: res.lastDailyScan ?? 0,
-        lastWeeklyScan: res.lastWeeklyScan ?? 0,
-        lastUserSync: res.lastUserSync ?? 0
+        lastCommentPoll: res.lastCommentPoll ?? 0,
+        lastAuthorSync: res.lastAuthorSync ?? 0,
+        lastBackfillSweepAt: res.lastBackfillSweepAt ?? 0,
+        backfillSweepFloor: res.backfillSweepFloor ?? 0
       };
     },
     async setTimestamp(key, ts) {
       await set(key, ts);
+    },
+    async getBackfillQueue() {
+      return get("backfillQueue", []);
+    },
+    async setBackfillQueue(queue) {
+      await set("backfillQueue", queue);
     }
   };
 }
@@ -219,35 +271,35 @@ function excerptFrom(html, maxChars = 140) {
 }
 
 const nowMs = () => Date.now();
-function toMonitored(item) {
-  if (!item || item.deleted || item.dead) return null;
-  if (item.type !== "story" && item.type !== "comment") return null;
+function toMonitoredFromAuthorHit(hit) {
+  const tags = hit._tags ?? [];
+  const isStory = tags.includes("story") || hit.title != null;
+  const isComment = tags.includes("comment") || hit.comment_text != null;
+  if (!isStory && !isComment) return null;
+  const type = isStory ? "story" : "comment";
+  const id = Number(hit.objectID);
+  if (!Number.isFinite(id)) return null;
   return {
-    id: item.id,
-    type: item.type,
-    submittedAt: (item.time ?? Math.floor(nowMs() / 1e3)) * 1e3,
-    lastDescendants: 0,
-    lastKids: []
+    id,
+    type,
+    submittedAt: hit.created_at_i * 1e3,
+    title: isStory ? hit.title : void 0,
+    excerpt: isComment && hit.comment_text ? excerptFrom(hit.comment_text, 140) : void 0
   };
 }
-function newKidIds(prev, next) {
-  const seen = new Set(prev);
-  const out = [];
-  for (const id of next) if (!seen.has(id)) out.push(id);
-  return out;
-}
-function toReply(item, parent, ctx = {}) {
-  if (!item || item.deleted || item.dead) return null;
-  if (!item.by || !item.id) return null;
+function toReplyFromCommentHit(hit, parent) {
+  if (!hit.author) return null;
+  const id = Number(hit.objectID);
+  if (!Number.isFinite(id)) return null;
   return {
-    id: item.id,
+    id,
     parentItemId: parent.id,
-    parentItemTitle: ctx.title,
-    parentAuthor: ctx.author,
-    parentExcerpt: ctx.excerpt,
-    author: item.by,
-    text: item.text ?? "",
-    time: (item.time ?? 0) * 1e3,
+    parentItemTitle: parent.type === "story" ? parent.title : void 0,
+    parentAuthor: parent.type === "comment" ? parent.parentAuthor : void 0,
+    parentExcerpt: parent.type === "comment" ? parent.excerpt : void 0,
+    author: hit.author,
+    text: hit.comment_text ?? "",
+    time: hit.created_at_i * 1e3,
     read: false,
     discoveredAt: nowMs()
   };
@@ -255,236 +307,288 @@ function toReply(item, parent, ctx = {}) {
 function ageMs(item, now = nowMs()) {
   return now - item.submittedAt;
 }
-function filterByAge(monitored, minAgeMs, maxAgeMs, now = nowMs()) {
-  const out = [];
-  for (const m of Object.values(monitored)) {
-    const age = ageMs(m, now);
-    if (age >= minAgeMs && age < maxAgeMs) out.push(m);
+async function pollComments(client, store) {
+  const config = await store.getConfig();
+  if (!config.hnUser) {
+    log("poller.pollComments", `skip reason=no-user`);
+    return { newReplies: 0, skipped: true, reason: "no-user" };
   }
-  return out;
-}
-async function checkOne(client, store, monitored, hnUser) {
-  const ageMsNow = nowMs() - monitored.submittedAt;
-  log("poller.checkOne", `ENTER id=${monitored.id} type=${monitored.type} submittedAt=${monitored.submittedAt} ageHrs=${(ageMsNow / 36e5).toFixed(2)} hnUser=${hnUser} prevKidsCount=${(monitored.lastKids ?? []).length} prevKids=${JSON.stringify(monitored.lastKids)} prevDescendants=${monitored.lastDescendants}`);
-  const current = await client.item(monitored.id);
-  if (!current || current.deleted || current.dead) {
-    log("poller.checkOne", `parent-unavailable id=${monitored.id} current=${current === null ? "null" : JSON.stringify({ deleted: current.deleted, dead: current.dead })}`);
-    return 0;
+  const hnUserLc = config.hnUser.toLowerCase();
+  const monitored = await store.getMonitored();
+  const parentIds = /* @__PURE__ */ new Set();
+  for (const k of Object.keys(monitored)) {
+    const n = Number(k);
+    if (Number.isFinite(n)) parentIds.add(n);
   }
-  log("poller.checkOne", `parent-fetched id=${monitored.id} by=${current.by} type=${current.type} descendants=${current.descendants} kidsCount=${(current.kids ?? []).length}`);
-  const prevKids = monitored.lastKids ?? [];
-  const currKids = current.kids ?? [];
-  const newIds = newKidIds(prevKids, currKids);
-  log("poller.checkOne", `diff id=${monitored.id} prevCount=${prevKids.length} currCount=${currKids.length} newCount=${newIds.length} currKids=${JSON.stringify(currKids)} new=${JSON.stringify(newIds)}`);
-  if (newIds.length === 0) {
-    if ((current.descendants ?? 0) !== (monitored.lastDescendants ?? 0)) {
-      log("poller.checkOne", `descendants-only-changed id=${monitored.id} from=${monitored.lastDescendants} to=${current.descendants} (nested activity, no new direct kids)`);
-      monitored.lastDescendants = current.descendants;
-      await store.upsertMonitored(monitored);
-    } else {
-      log("poller.checkOne", `no-change id=${monitored.id} descendants=${current.descendants}`);
-    }
-    return 0;
+  if (parentIds.size === 0) {
+    log("poller.pollComments", `skip reason=no-monitored user=${config.hnUser}`);
+    await store.setTimestamp("lastCommentPoll", nowMs());
+    return { newReplies: 0, skipped: true, reason: "no-monitored" };
   }
-  const capped = newIds.slice(0, FETCH.MAX_REPLIES_PER_CHECK);
-  if (capped.length < newIds.length) {
-    log("poller.checkOne", `cap-applied id=${monitored.id} willFetch=${capped.length} leftover=${newIds.length - capped.length}`);
-  }
-  log("poller.checkOne", `→ fetchItems id=${monitored.id} count=${capped.length} ids=${JSON.stringify(capped)}`);
-  const newItems = await fetchItems(client, capped);
-  log("poller.checkOne", `← fetchItems id=${monitored.id} got=${newItems.length}`);
-  const parentCtx = monitored.type === "story" ? { title: current.title } : { author: current.by, excerpt: excerptFrom(current.text, 140) };
-  log("poller.checkOne", `parent-ctx id=${monitored.id} ctx=${JSON.stringify(parentCtx)}`);
+  const sinceSec = Math.floor((nowMs() - OVERLAP_MS) / 1e3);
+  log("poller.pollComments", `ENTER user=${config.hnUser} monitoredCount=${parentIds.size} sinceSec=${sinceSec}`);
+  const hits = await client.searchComments(sinceSec);
+  log("poller.pollComments", `algolia returned ${hits.length} hits`);
   const replies = [];
-  const fetchedIds = /* @__PURE__ */ new Set();
-  let selfSkipped = 0;
-  let deadSkipped = 0;
-  const hnUserLc = hnUser.toLowerCase();
-  for (const it of newItems) {
-    fetchedIds.add(it.id);
-    log("poller.checkOne", `consider kid=${it.id} by=${it.by} deleted=${it.deleted} dead=${it.dead} parent=${monitored.id}`);
-    if ((it.by ?? "").toLowerCase() === hnUserLc) {
-      selfSkipped++;
-      log("poller.checkOne", `self-skip kid=${it.id} by=${it.by} hnUser=${hnUser}`);
+  let selfSkip = 0;
+  let notMonitoredSkip = 0;
+  for (const h of hits) {
+    if (!parentIds.has(h.parent_id)) {
+      notMonitoredSkip++;
       continue;
     }
-    const r = toReply(it, monitored, parentCtx);
-    if (r) {
-      replies.push(r);
-      log("poller.checkOne", `accepted kid=${it.id} as reply by=${r.author}`);
-    } else {
-      deadSkipped++;
-      log("poller.checkOne", `dead/deleted-skip kid=${it.id} deleted=${it.deleted} dead=${it.dead}`);
+    if ((h.author ?? "").toLowerCase() === hnUserLc) {
+      selfSkip++;
+      continue;
     }
+    const parent = monitored[String(h.parent_id)];
+    if (!parent) continue;
+    const r = toReplyFromCommentHit(h, parent);
+    if (r) replies.push(r);
   }
+  let inserted = 0;
   if (replies.length > 0) {
-    log("poller.checkOne", `→ addReplies id=${monitored.id} count=${replies.length}`);
-    await store.addReplies(replies);
-    log("poller.checkOne", `← addReplies id=${monitored.id} ok`);
+    inserted = await store.addReplies(replies);
+    log("poller.pollComments", `candidates=${replies.length} inserted=${inserted} passed to addReplies`);
   }
-  log("poller.checkOne", `stored id=${monitored.id} new=${replies.length} selfSkipped=${selfSkipped} deadSkipped=${deadSkipped} fetched=${fetchedIds.size}`);
-  const processed = /* @__PURE__ */ new Set([...prevKids, ...fetchedIds]);
-  const nextLastKids = currKids.filter((id) => processed.has(id));
-  log("poller.checkOne", `updating-baseline id=${monitored.id} prevKidsCount=${prevKids.length} fetchedCount=${fetchedIds.size} processedCount=${processed.size} nextLastKidsCount=${nextLastKids.length} nextLastKids=${JSON.stringify(nextLastKids)}`);
-  monitored.lastKids = nextLastKids;
-  monitored.lastDescendants = current.descendants;
-  await store.upsertMonitored(monitored);
-  log("poller.checkOne", `EXIT id=${monitored.id} returned=${replies.length}`);
-  return replies.length;
+  await store.setTimestamp("lastCommentPoll", nowMs());
+  const hitRate = hits.length > 0 ? (replies.length / hits.length * 100).toFixed(1) : "0.0";
+  const nextCommentPollFloorIso = new Date(nowMs() - OVERLAP_MS).toISOString();
+  log(
+    "poller.pollComments",
+    `EXIT inserted=${inserted} candidates=${replies.length} hits=${hits.length} hitRate=${hitRate}% selfSkip=${selfSkip} notMonitoredSkip=${notMonitoredSkip} nextWindowStartIso=${nextCommentPollFloorIso}`
+  );
+  return { newReplies: inserted, skipped: false };
 }
-async function syncUserSubmissions(client, store, username, opts = {}) {
-  const now = nowMs();
-  log("poller.syncUser", `ENTER user=${username} force=${!!opts.force} maxNewItems=${opts.maxNewItems ?? FETCH.MAX_SYNC_ITEMS_PER_CALL}`);
-  if (!opts.force) {
-    const { lastUserSync } = await store.getTimestamps();
-    const age = now - lastUserSync;
-    if (age < FETCH.USER_SYNC_MIN_INTERVAL_MS) {
-      return 0;
-    }
-  }
-  const user = await client.user(username);
-  if (!user || !user.submitted) {
-    log("poller.syncUser", `no-submissions user=${username} userObj=${JSON.stringify(user)}`);
+async function syncAuthor(client, store) {
+  const config = await store.getConfig();
+  if (!config.hnUser) {
+    log("poller.syncAuthor", `skip reason=no-user`);
     return 0;
   }
-  log("poller.syncUser", `← client.user(${username}) id=${user.id} karma=${user.karma} submittedCount=${user.submitted.length} submitted[:10]=${JSON.stringify(user.submitted.slice(0, 10))}`);
-  const existing = await store.getMonitored();
-  log("poller.syncUser", `existingMonitored count=${Object.keys(existing).length} ids=${JSON.stringify(Object.keys(existing))}`);
-  const dropThreshold = now - BUCKET.DROP_AGE_MS;
-  const cap = opts.maxNewItems ?? FETCH.MAX_SYNC_ITEMS_PER_CALL;
+  const { lastAuthorSync } = await store.getTimestamps();
+  const firstSync = !lastAuthorSync;
+  const now = nowMs();
+  const sinceMs = firstSync ? now - DROP_AGE_MS : Math.max(lastAuthorSync - OVERLAP_MS, now - DROP_AGE_MS);
+  const sinceSec = Math.floor(sinceMs / 1e3);
+  log("poller.syncAuthor", `ENTER user=${config.hnUser} firstSync=${firstSync} sinceSec=${sinceSec}`);
+  const hits = await client.searchByAuthor(config.hnUser, sinceSec);
+  log("poller.syncAuthor", `algolia returned ${hits.length} author hits`);
+  const dropThreshold = now - DROP_AGE_MS;
+  const monitored = await store.getMonitored();
   let added = 0;
-  let fetched = 0;
-  for (const id of user.submitted) {
-    if (added >= cap) {
-      break;
-    }
-    if (fetched >= cap * 2) {
-      break;
-    }
-    const key = String(id);
-    if (existing[key]) {
+  let skippedOld = 0;
+  let skippedExisting = 0;
+  for (const h of hits) {
+    const m = toMonitoredFromAuthorHit(h);
+    if (!m) continue;
+    if (m.submittedAt < dropThreshold) {
+      skippedOld++;
       continue;
     }
-    const item = await client.item(id);
-    fetched++;
-    if (!item || !item.time) {
-      log("poller.syncUser", `skip-null-or-notime id=${id} item=${JSON.stringify(item)}`);
+    const key = String(m.id);
+    if (monitored[key]) {
+      skippedExisting++;
       continue;
     }
-    const itemTime = item.time * 1e3;
-    if (itemTime < dropThreshold) {
-      break;
-    }
-    const m = toMonitored(item);
-    if (!m) {
-      log("poller.syncUser", `skip-toMonitored-rejected id=${id} type=${item.type} deleted=${item.deleted} dead=${item.dead}`);
-      continue;
-    }
-    await store.upsertMonitored(m);
+    monitored[key] = m;
     added++;
-    log("poller.syncUser", `ADDED id=${id} type=${m.type} ageDays=${((now - m.submittedAt) / 864e5).toFixed(2)} lastKids=${JSON.stringify(m.lastKids)} lastDescendants=${m.lastDescendants} origKidsOnItem=${(item.kids ?? []).length} origDescendants=${item.descendants}`);
   }
-  await store.setTimestamp("lastUserSync", now);
-  return added;
-}
-async function tick(client, store, opts = {}) {
-  const config = await store.getConfig();
-  if (!config.hnUser) {
-    return { newReplies: 0, itemsChecked: 0, skipped: true, reason: "no-user" };
+  if (added > 0) {
+    await store.setMonitored(monitored);
   }
-  log("poller.tick", `start user=${config.hnUser} skipIdsCount=${opts.skipIds?.size ?? 0}`);
-  const updates = await client.updates();
-  const monitored = await store.getMonitored();
-  const userChanged = updates.profiles.includes(config.hnUser);
-  const changedIds = new Set(updates.items);
-  const skipIds = opts.skipIds;
-  const toCheck = [];
-  let skippedByCaller = 0;
-  for (const m of Object.values(monitored)) {
-    if (!changedIds.has(m.id)) continue;
-    if (skipIds?.has(m.id)) {
-      skippedByCaller++;
-      continue;
-    }
-    toCheck.push(m);
-  }
-  log("poller.tick", `updates itemsInFeed=${updates.items.length} profilesInFeed=${updates.profiles.length} userInProfiles=${userChanged} monitored=${Object.keys(monitored).length} toCheck=${toCheck.length} skippedByCaller=${skippedByCaller} toCheckIds=${JSON.stringify(toCheck.map((m) => m.id))}`);
-  if (userChanged) {
-    log("poller.tick", `user-in-profiles user=${config.hnUser} → attempting sync (cooldown-gated)`);
-    await syncUserSubmissions(client, store, config.hnUser);
-  }
-  let total = 0;
-  const processedIds = [];
-  for (const m of toCheck) {
-    processedIds.push(m.id);
-    total += await checkOne(client, store, m, config.hnUser);
-  }
-  await store.setTimestamp("lastTick", nowMs());
-  log("poller.tick", `done newReplies=${total} itemsChecked=${toCheck.length}`);
-  return { newReplies: total, itemsChecked: toCheck.length, skipped: false, processedIds };
-}
-async function checkFastBucket(client, store) {
-  const config = await store.getConfig();
-  if (!config.hnUser) {
-    log("poller.checkFastBucket", `skip reason=no-user config=${JSON.stringify(config)}`);
-    return { newReplies: 0, itemsChecked: 0, skipped: true, reason: "no-user", processedIds: [] };
-  }
-  const monitored = await store.getMonitored();
-  const now = nowMs();
-  const allIds = Object.keys(monitored);
-  log("poller.checkFastBucket", `monitored-snapshot user=${config.hnUser} totalCount=${allIds.length} ids=${JSON.stringify(allIds)}`);
-  for (const m of Object.values(monitored)) {
-    const ageH = ((now - m.submittedAt) / 36e5).toFixed(2);
-    log("poller.checkFastBucket", `item id=${m.id} type=${m.type} ageHrs=${ageH} withinFastBucket=${now - m.submittedAt < BUCKET.FAST_MAX_AGE_MS} lastKidsCount=${(m.lastKids ?? []).length}`);
-  }
-  const targets = filterByAge(monitored, 0, BUCKET.FAST_MAX_AGE_MS);
-  log("poller.checkFastBucket", `targets=${targets.length} ids=${JSON.stringify(targets.map((m) => m.id))} fastMaxAgeMs=${BUCKET.FAST_MAX_AGE_MS}`);
-  let total = 0;
-  const processedIds = [];
-  for (const m of targets) {
-    log("poller.checkFastBucket", `→ checkOne id=${m.id}`);
-    const n = await checkOne(client, store, m, config.hnUser);
-    log("poller.checkFastBucket", `← checkOne id=${m.id} newReplies=${n}`);
-    processedIds.push(m.id);
-    total += n;
-  }
-  log("poller.checkFastBucket", `EXIT newReplies=${total} itemsChecked=${targets.length} processedIds=${JSON.stringify(processedIds)}`);
-  return { newReplies: total, itemsChecked: targets.length, skipped: false, processedIds };
-}
-async function scanBucket(client, store, minAgeMs, maxAgeMs, stampKey) {
-  const config = await store.getConfig();
-  if (!config.hnUser) {
-    return { newReplies: 0, itemsChecked: 0, skipped: true, reason: "no-user" };
-  }
-  await syncUserSubmissions(client, store, config.hnUser);
-  const monitored = await store.getMonitored();
-  const targets = filterByAge(monitored, minAgeMs, maxAgeMs);
-  log("poller.scanBucket", `bucket stampKey=${stampKey} monitored=${Object.keys(monitored).length} targets=${targets.length} targetIds=${JSON.stringify(targets.map((m) => m.id))}`);
-  let total = 0;
-  for (const m of targets) {
-    total += await checkOne(client, store, m, config.hnUser);
-  }
-  const now = nowMs();
   const toDrop = [];
   for (const m of Object.values(monitored)) {
-    if (ageMs(m, now) >= BUCKET.DROP_AGE_MS) toDrop.push(m.id);
+    if (ageMs(m, now) >= DROP_AGE_MS) toDrop.push(m.id);
   }
   if (toDrop.length > 0) {
-    log("poller.scanBucket", `drop-expired stampKey=${stampKey} count=${toDrop.length} ids=${JSON.stringify(toDrop)}`);
     await store.removeMonitored(toDrop);
   }
-  if (stampKey === "lastDailyScan") {
-    const retentionDays = Math.max(1, Number(config.retentionDays) || 30);
-    await store.pruneReplies({
-      readOlderThanMs: retentionDays * DAY_MS,
-      hardCap: RETENTION.HARD_REPLY_CAP,
-      orphanedIfMonitoredMissing: true,
-      now
-    });
+  const retentionDays = Math.max(1, Number(config.retentionDays) || 30);
+  const dropped = await store.pruneReplies({
+    readOlderThanMs: retentionDays * DAY_MS,
+    hardCap: RETENTION.HARD_REPLY_CAP,
+    orphanedIfMonitoredMissing: true,
+    now
+  });
+  if (dropped > 0) log("poller.syncAuthor", `pruned ${dropped} replies retentionDays=${retentionDays}`);
+  await store.setTimestamp("lastAuthorSync", now);
+  log("poller.syncAuthor", `EXIT added=${added} skippedOld=${skippedOld} skippedExisting=${skippedExisting} dropped=${toDrop.length}`);
+  return added;
+}
+async function maybeSyncAuthor(client, store) {
+  const { lastAuthorSync } = await store.getTimestamps();
+  const now = nowMs();
+  const age = now - lastAuthorSync;
+  if (lastAuthorSync > 0 && age < AUTHOR_SYNC_MS) {
+    const nextEligibleAt = lastAuthorSync + AUTHOR_SYNC_MS;
+    const msUntilEligible = nextEligibleAt - now;
+    log(
+      "poller.maybeSyncAuthor",
+      `gated age=${age} cadence=${AUTHOR_SYNC_MS} msUntilEligible=${msUntilEligible} nextEligibleIso=${new Date(nextEligibleAt).toISOString()}`
+    );
+    return 0;
   }
-  await store.setTimestamp(stampKey, now);
-  log("poller.scanBucket", `done stampKey=${stampKey} newReplies=${total} itemsChecked=${targets.length}`);
-  return { newReplies: total, itemsChecked: targets.length, skipped: false };
+  return syncAuthor(client, store);
+}
+function backfillDepthMs(config) {
+  const days = Math.max(1, Number(config.backfillDays) || 7);
+  return days * DAY_MS;
+}
+function computeBackfillSinceMs(opts) {
+  const depthMs = Math.max(1, opts.backfillDays) * DAY_MS;
+  return Math.min(opts.now, Math.max(opts.lastBackfillSweepAt, opts.now - depthMs));
+}
+async function maybeEnqueueBackfillSweep(store, now = nowMs()) {
+  const config = await store.getConfig();
+  if (!config.hnUser) return 0;
+  const { lastCommentPoll, lastBackfillSweepAt, backfillSweepFloor } = await store.getTimestamps();
+  const gap = now - lastCommentPoll;
+  const neverSwept = lastBackfillSweepAt === 0;
+  const absence = lastCommentPoll > 0 && gap > OVERLAP_MS;
+  const firstPoll = lastCommentPoll === 0;
+  if (!neverSwept && !absence && !firstPoll) {
+    return 0;
+  }
+  const existingQueue = await store.getBackfillQueue();
+  const invalidateDueToAbsence = absence && existingQueue.length > 0;
+  if (existingQueue.length > 0 && !invalidateDueToAbsence) {
+    log(
+      "poller.maybeEnqueueBackfillSweep",
+      `skip reason=sweep-in-progress queueLen=${existingQueue.length}`
+    );
+    return 0;
+  }
+  if (invalidateDueToAbsence) {
+    log(
+      "poller.BACKFILL.invalidate",
+      `reason=absence-during-sweep gap=${gap} queueLen-was=${existingQueue.length} — re-enqueueing all in-window items with widened floor`
+    );
+  }
+  const depthMs = backfillDepthMs(config);
+  const cutoff = now - depthMs;
+  const monitored = await store.getMonitored();
+  const candidates = Object.values(monitored).filter((m) => m.submittedAt >= cutoff).sort((a, b) => b.submittedAt - a.submittedAt).map((m) => m.id);
+  if (candidates.length === 0) return 0;
+  const newFloor = computeBackfillSinceMs({ now, lastBackfillSweepAt, backfillDays: Number(config.backfillDays) || 7 });
+  const pinnedFloor = backfillSweepFloor > 0 ? Math.min(backfillSweepFloor, newFloor) : newFloor;
+  if (pinnedFloor !== backfillSweepFloor) {
+    await store.setTimestamp("backfillSweepFloor", pinnedFloor);
+  }
+  const nextQueue = candidates;
+  await store.setBackfillQueue(nextQueue);
+  const trigger = firstPoll ? "first-poll" : neverSwept ? "never-swept" : "absence";
+  log(
+    "poller.BACKFILL.enqueue",
+    `trigger=${trigger} enqueued=${candidates.length} queueTotal=${nextQueue.length} depth=${Number(config.backfillDays) || 7}d floorIso=${new Date(pinnedFloor).toISOString()} windowDaysBack=${((now - pinnedFloor) / DAY_MS).toFixed(2)}`
+  );
+  log(
+    "poller.maybeEnqueueBackfillSweep",
+    `gap=${gap} cutoff=${cutoff} pinnedFloor=${pinnedFloor} enqueued=${candidates.length} queueTotal=${nextQueue.length}`
+  );
+  return candidates.length;
+}
+async function drainOneBackfillItem(client, store, now = nowMs(), monitoredCache) {
+  const queue = await store.getBackfillQueue();
+  if (queue.length === 0) return 0;
+  const config = await store.getConfig();
+  if (!config.hnUser) return 0;
+  const [head, ...rest] = queue;
+  const monitored = monitoredCache ?? await store.getMonitored();
+  const parent = monitored[String(head)];
+  const { lastBackfillSweepAt, backfillSweepFloor } = await store.getTimestamps();
+  if (!parent) {
+    await store.setBackfillQueue(rest);
+    log("poller.drainOneBackfillItem", `parent=${head} evicted — dropped from queue`);
+    if (rest.length === 0) {
+      await store.setTimestamp("lastBackfillSweepAt", now);
+      await store.setTimestamp("backfillSweepFloor", 0);
+    }
+    return 0;
+  }
+  const sweepFloorMs = backfillSweepFloor > 0 ? backfillSweepFloor : computeBackfillSinceMs({
+    now,
+    lastBackfillSweepAt,
+    backfillDays: Number(config.backfillDays) || 7
+  });
+  const sinceMs = sweepFloorMs;
+  const sinceSec = Math.floor(sinceMs / 1e3);
+  const hits = await client.searchByParent(head, sinceSec);
+  const hnUserLc = config.hnUser.toLowerCase();
+  const replies = [];
+  for (const h of hits) {
+    if ((h.author ?? "").toLowerCase() === hnUserLc) continue;
+    const r = toReplyFromCommentHit(h, parent);
+    if (r) replies.push(r);
+  }
+  const inserted = replies.length > 0 ? await store.addReplies(replies) : 0;
+  await store.setBackfillQueue(rest);
+  const filtered = hits.length - replies.length;
+  let verdict;
+  if (inserted > 0) verdict = `SURFACED ${inserted} new`;
+  else if (hits.length === 0) verdict = "no-hits";
+  else if (filtered > 0 && replies.length === 0) verdict = `no-new (all ${filtered} filtered: self/invalid)`;
+  else if (filtered > 0) verdict = `no-new (${replies.length} dupes + ${filtered} filtered)`;
+  else verdict = `no-new (all ${replies.length} dupes)`;
+  log(
+    "poller.BACKFILL.drain",
+    `parent=${head} sinceSec=${sinceSec} fetched=${hits.length} candidates=${replies.length} ${verdict} queueRemaining=${rest.length}`
+  );
+  if (rest.length === 0) {
+    await store.setTimestamp("lastBackfillSweepAt", now);
+    await store.setTimestamp("backfillSweepFloor", 0);
+    log(
+      "poller.BACKFILL.complete",
+      `sweep drained — lastBackfillSweepAt=${new Date(now).toISOString()}, floor cleared. Next enqueue fires only on gap>${OVERLAP_MS / 6e4}min OR user/data change.`
+    );
+  }
+  log(
+    "poller.drainOneBackfillItem",
+    `parent=${head} sinceSec=${sinceSec} hits=${hits.length} candidates=${replies.length} inserted=${inserted} queueRemaining=${rest.length}`
+  );
+  return inserted;
+}
+const DRAIN_ALL_DELAY_MS = 1500;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function drainBackfillQueueCompletely(client, store) {
+  let itemsProcessed = 0;
+  let repliesSurfaced = 0;
+  const started = nowMs();
+  const monitoredCache = await store.getMonitored();
+  const initialLen = (await store.getBackfillQueue()).length;
+  log(
+    "poller.BACKFILL.drainAll.start",
+    `queueLen=${initialLen} delayMs=${DRAIN_ALL_DELAY_MS} etaMinutes=${(initialLen * DRAIN_ALL_DELAY_MS / 6e4).toFixed(1)}`
+  );
+  while (true) {
+    const queueBefore = await store.getBackfillQueue();
+    if (queueBefore.length === 0) break;
+    const inserted = await drainOneBackfillItem(client, store, nowMs(), monitoredCache);
+    itemsProcessed++;
+    repliesSurfaced += inserted;
+    if (itemsProcessed > 5e3) {
+      log("poller.BACKFILL.drainAll.abort", `itemsProcessed=${itemsProcessed} — aborting runaway drain`);
+      break;
+    }
+    const queueAfter = await store.getBackfillQueue();
+    if (queueAfter.length > 0) {
+      await sleep(DRAIN_ALL_DELAY_MS);
+    }
+  }
+  const queueAtEnd = await store.getBackfillQueue();
+  if (queueAtEnd.length === 0) {
+    await store.setTimestamp("lastBackfillSweepAt", started);
+    log(
+      "poller.BACKFILL.drainAll.stamp",
+      `lastBackfillSweepAt rewound to drain-start=${new Date(started).toISOString()} (not drain-end) so post-drain pollComments can recover missed replies`
+    );
+  }
+  const durationMs = nowMs() - started;
+  log(
+    "poller.BACKFILL.drainAll.done",
+    `itemsProcessed=${itemsProcessed} repliesSurfaced=${repliesSurfaced} durationMs=${durationMs}`
+  );
+  return { itemsProcessed, repliesSurfaced };
 }
 
 async function updateBadge(unreadCount) {
@@ -500,150 +604,141 @@ const store = createStore();
 async function refreshBadge() {
   const n = await store.getUnreadCount();
   await updateBadge(n);
+  log("index.refreshBadge", `unread=${n}`);
 }
 async function ensureAlarms() {
   const config = await store.getConfig();
-  const tickMin = Math.max(1, config.tickMinutes || DEFAULT_CONFIG.tickMinutes);
+  const requested = config.tickMinutes;
+  const tickMin = Math.min(
+    Math.max(1, config.tickMinutes || DEFAULT_CONFIG.tickMinutes),
+    MAX_TICK_MINUTES
+  );
   const existing = await chrome.alarms.get(ALARM.TICK);
+  const existingPeriod = existing?.periodInMinutes ?? null;
+  const existingNextMs = existing?.scheduledTime ?? null;
   if (!existing || existing.periodInMinutes !== tickMin) {
     await chrome.alarms.create(ALARM.TICK, {
       periodInMinutes: tickMin,
       delayInMinutes: tickMin
     });
-  }
-  if (!await chrome.alarms.get(ALARM.DAILY)) {
-    await chrome.alarms.create(ALARM.DAILY, { periodInMinutes: 24 * 60, delayInMinutes: 60 });
-  }
-  if (!await chrome.alarms.get(ALARM.WEEKLY)) {
-    await chrome.alarms.create(ALARM.WEEKLY, { periodInMinutes: 7 * 24 * 60, delayInMinutes: 24 * 60 });
+    const created = await chrome.alarms.get(ALARM.TICK);
+    log(
+      "index.ensureAlarms",
+      `ACTION=registered requested=${requested} clamped=${tickMin} existingPeriod=${existingPeriod} existingNextIso=${existingNextMs ? new Date(existingNextMs).toISOString() : "none"} newPeriod=${created?.periodInMinutes} newNextIso=${created ? new Date(created.scheduledTime).toISOString() : "none"}`
+    );
+  } else {
+    log(
+      "index.ensureAlarms",
+      `ACTION=noop periodMin=${tickMin} (unchanged) nextIso=${existingNextMs ? new Date(existingNextMs).toISOString() : "none"}`
+    );
   }
 }
-const inFlight = { tick: null, daily: null, weekly: null };
-function singleFlight(key, run) {
-  if (inFlight[key]) {
-    return inFlight[key];
-  }
-  let p;
-  p = (async () => {
-    try {
-      await run();
-    } finally {
-      if (inFlight[key] === p) inFlight[key] = null;
-    }
-  })();
-  inFlight[key] = p;
-  return p;
+const MIN_REFRESH_INTERVAL_MS = 1e4;
+let lastForceRefreshAt = 0;
+async function withTickLock(fn) {
+  return navigator.locks.request(LOCK.TICK, async () => fn());
 }
 async function runTick() {
-  return singleFlight("tick", async () => {
-    log("index.runTick", `enter`);
+  const lockRequestedAt = Date.now();
+  await navigator.locks.request(LOCK.TICK, { ifAvailable: true }, async (lock) => {
+    if (lock === null) {
+      log("index.runTick", `coalesced — lock held by peer, skipping redundant tick`);
+      return;
+    }
+    const lockGrantedAt = Date.now();
+    const lockWaitMs = lockGrantedAt - lockRequestedAt;
     try {
-      await tick(hnClient, store);
+      const tickNow = lockGrantedAt;
+      if (lockWaitMs > 50) {
+        log("index.runTick", `lock-wait waitMs=${lockWaitMs}`);
+      }
+      const [cfg, ts, queue, alarm] = await Promise.all([
+        store.getConfig(),
+        store.getTimestamps(),
+        store.getBackfillQueue(),
+        chrome.alarms.get(ALARM.TICK)
+      ]);
+      const gap = ts.lastCommentPoll > 0 ? tickNow - ts.lastCommentPoll : Infinity;
+      log("index.runTick", `STATE=enter nowIso=${new Date(tickNow).toISOString()} config=${JSON.stringify({ user: cfg.hnUser, tickMin: cfg.tickMinutes, backfillDays: cfg.backfillDays, retention: cfg.retentionDays })} gapMs=${gap === Infinity ? "first" : gap} ts=${JSON.stringify({ lastCommentPoll: ts.lastCommentPoll, lastAuthorSync: ts.lastAuthorSync, lastBackfillSweepAt: ts.lastBackfillSweepAt, backfillSweepFloor: ts.backfillSweepFloor })} queueLen=${queue.length} alarm=${alarm ? `period=${alarm.periodInMinutes} nextIso=${new Date(alarm.scheduledTime).toISOString()}` : "NONE"}`);
+      await maybeSyncAuthor(algoliaClient, store);
+      await maybeEnqueueBackfillSweep(store, tickNow);
+      await pollComments(algoliaClient, store);
+      await drainOneBackfillItem(algoliaClient, store, tickNow);
     } catch (err) {
       logErr("index.runTick", `failed`, err);
       console.error("[HNswered] tick failed:", err);
     } finally {
       await refreshBadge();
-      log("index.runTick", `exit`);
+      {
+        const [postTs, postQueue, postReplies] = await Promise.all([
+          store.getTimestamps(),
+          store.getBackfillQueue(),
+          store.getReplies()
+        ]);
+        const durationMs = Date.now() - lockGrantedAt;
+        log(
+          "index.runTick",
+          `STATE=exit durationMs=${durationMs} queueLen=${postQueue.length} repliesTotal=${Object.keys(postReplies).length} ts=${JSON.stringify({ lastCommentPoll: postTs.lastCommentPoll, lastBackfillSweepAt: postTs.lastBackfillSweepAt, backfillSweepFloor: postTs.backfillSweepFloor })}`
+        );
+      }
     }
   });
 }
-const MIN_REFRESH_INTERVAL_MS = 1e4;
-let lastForceRefreshAt = 0;
-async function runRefresh() {
+async function runRefresh(fullDrain = false) {
+  log("index.runRefresh", `ENTER`);
   const now = Date.now();
   const sinceLastMs = now - lastForceRefreshAt;
   if (sinceLastMs < MIN_REFRESH_INTERVAL_MS) {
-    await runTick();
+    log("index.runRefresh", `THROTTLED sinceLastMs=${sinceLastMs} min=${MIN_REFRESH_INTERVAL_MS} — draining any in-flight tick`);
+    await navigator.locks.request(LOCK.TICK, () => {
+    });
     return;
   }
   lastForceRefreshAt = now;
-  const prior = inFlight.tick;
-  let slot;
-  slot = (async () => {
+  await navigator.locks.request(LOCK.TICK, async () => {
     try {
-      if (prior) {
-        log("index.runRefresh", `drain prior in-flight tick before doing refresh work`);
-        try {
-          await prior;
-        } catch {
-        }
-        log("index.runRefresh", `drained prior tick ok`);
-      }
       const config = await store.getConfig();
-      const { hnUser } = config;
-      log("index.runRefresh", `config hnUser=${JSON.stringify(hnUser)} tickMin=${config.tickMinutes} retDays=${config.retentionDays}`);
-      const monitoredBefore = await store.getMonitored();
-      log("index.runRefresh", `pre-sync monitoredCount=${Object.keys(monitoredBefore).length} ids=${JSON.stringify(Object.keys(monitoredBefore))}`);
-      if (hnUser) {
-        log("index.runRefresh", `→ syncUserSubmissions user=${hnUser} force=true`);
-        const added = await syncUserSubmissions(hnClient, store, hnUser, { force: true });
-        log("index.runRefresh", `← syncUserSubmissions user=${hnUser} added=${added}`);
-      } else {
-        log("index.runRefresh", `skip syncUserSubmissions — no hnUser configured`);
+      log("index.runRefresh", `config hnUser=${JSON.stringify(config.hnUser)} tickMin=${config.tickMinutes} retDays=${config.retentionDays}`);
+      if (!config.hnUser) {
+        log("index.runRefresh", `skip — no hnUser configured`);
+        return;
       }
-      const monitoredAfter = await store.getMonitored();
-      log("index.runRefresh", `post-sync monitoredCount=${Object.keys(monitoredAfter).length} ids=${JSON.stringify(Object.keys(monitoredAfter))}`);
-      log("index.runRefresh", `→ checkFastBucket`);
-      const fastRes = await checkFastBucket(hnClient, store);
-      log("index.runRefresh", `← checkFastBucket newReplies=${fastRes.newReplies} itemsChecked=${fastRes.itemsChecked} skipped=${fastRes.skipped} reason=${fastRes.reason}`);
-      const skipIds = new Set(fastRes.processedIds ?? []);
-      log("index.runRefresh", `→ tick skipIdsCount=${skipIds.size}`);
-      const tickRes = await tick(hnClient, store, { skipIds });
-      log("index.runRefresh", `← tick newReplies=${tickRes.newReplies} itemsChecked=${tickRes.itemsChecked} skipped=${tickRes.skipped} reason=${tickRes.reason}`);
-      const replies = await store.getReplies();
-      log("index.runRefresh", `final replyCount=${Object.keys(replies).length}`);
+      const refreshNow = Date.now();
+      const [rcfg, rts, rqueue] = await Promise.all([store.getConfig(), store.getTimestamps(), store.getBackfillQueue()]);
+      log("index.runRefresh", `STATE=enter nowIso=${new Date(refreshNow).toISOString()} config=${JSON.stringify({ user: rcfg.hnUser, tickMin: rcfg.tickMinutes, backfillDays: rcfg.backfillDays, retention: rcfg.retentionDays })} ts=${JSON.stringify({ lastCommentPoll: rts.lastCommentPoll, lastAuthorSync: rts.lastAuthorSync, lastBackfillSweepAt: rts.lastBackfillSweepAt, backfillSweepFloor: rts.backfillSweepFloor })} queueLen=${rqueue.length}`);
+      const added = await syncAuthor(algoliaClient, store);
+      log("index.runRefresh", `syncAuthor added=${added}`);
+      await maybeEnqueueBackfillSweep(store, refreshNow);
+      const res = await pollComments(algoliaClient, store);
+      log("index.runRefresh", `pollComments newReplies=${res.newReplies} skipped=${res.skipped} reason=${res.reason}`);
+      if (fullDrain) {
+        await drainBackfillQueueCompletely(algoliaClient, store);
+      } else {
+        await drainOneBackfillItem(algoliaClient, store, refreshNow);
+      }
     } catch (err) {
+      logErr("index.runRefresh", `failed`, err);
       console.error("[HNswered] refresh failed:", err);
     } finally {
-      if (inFlight.tick === slot) inFlight.tick = null;
       await refreshBadge();
-    }
-  })();
-  inFlight.tick = slot;
-  return slot;
-}
-async function runDaily() {
-  return singleFlight("daily", async () => {
-    log("index.runDaily", `enter`);
-    try {
-      await scanBucket(hnClient, store, BUCKET.DAILY_MIN_AGE_MS, BUCKET.DAILY_MAX_AGE_MS, "lastDailyScan");
-    } catch (err) {
-      logErr("index.runDaily", `failed`, err);
-      console.error("[HNswered] daily scan failed:", err);
-    } finally {
-      await refreshBadge();
-      log("index.runDaily", `exit`);
-    }
-  });
-}
-async function runWeekly() {
-  return singleFlight("weekly", async () => {
-    log("index.runWeekly", `enter`);
-    try {
-      await scanBucket(hnClient, store, BUCKET.WEEKLY_MIN_AGE_MS, BUCKET.WEEKLY_MAX_AGE_MS, "lastWeeklyScan");
-    } catch (err) {
-      logErr("index.runWeekly", `failed`, err);
-      console.error("[HNswered] weekly scan failed:", err);
-    } finally {
-      await refreshBadge();
-      log("index.runWeekly", `exit`);
+      log("index.runRefresh", `EXIT`);
     }
   });
 }
 chrome.runtime.onInstalled.addListener(async () => {
+  log("index.onInstalled", `fired`);
   await ensureAlarms();
   await refreshBadge();
 });
 chrome.runtime.onStartup.addListener(async () => {
+  log("index.onStartup", `fired`);
   await ensureAlarms();
   await refreshBadge();
 });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  log("index.onAlarm", `fired name=${alarm.name} scheduledTime=${alarm.scheduledTime}`);
+  const driftMs = Date.now() - alarm.scheduledTime;
+  log("index.onAlarm", `fired name=${alarm.name} scheduledIso=${new Date(alarm.scheduledTime).toISOString()} driftMs=${driftMs}`);
   if (alarm.name === ALARM.TICK) void runTick();
-  else if (alarm.name === ALARM.DAILY) void runDaily();
-  else if (alarm.name === ALARM.WEEKLY) void runWeekly();
 });
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
@@ -668,12 +763,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
         case "mark-read": {
-          await store.markRead(message.id);
+          await withTickLock(() => store.markRead(message.id));
           respond({ ok: true });
           return;
         }
         case "mark-all-read": {
-          await store.markAllRead();
+          await withTickLock(() => store.markAllRead());
           respond({ ok: true });
           return;
         }
@@ -683,41 +778,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
         case "set-config": {
-          const prev = await store.getConfig();
-          const config = await store.setConfig(message.config);
-          const nextUser = (config.hnUser ?? "").trim();
-          const prevUser = (prev.hnUser ?? "").trim();
-          if (nextUser !== prevUser) {
-            log("index.onMessage", `user-changed from=${JSON.stringify(prevUser)} to=${JSON.stringify(nextUser)} → clearPerUserState`);
-            await store.clearPerUserState();
+          log("index.onMessage.set-config", `INCOMING payload=${JSON.stringify(message.config)}`);
+          const { config, userChanged, backfillWidened, nextUser } = await withTickLock(async () => {
+            const prev = await store.getConfig();
+            const next = await store.setConfig(message.config);
+            const nextU = (next.hnUser ?? "").trim();
+            const prevU = (prev.hnUser ?? "").trim();
+            const changed = nextU !== prevU;
+            const widened = !changed && (next.backfillDays ?? 7) > (prev.backfillDays ?? 7);
+            if (changed) {
+              log("index.onMessage", `user-changed from=${JSON.stringify(prevU)} to=${JSON.stringify(nextU)} → clearPerUserState`);
+              await store.clearPerUserState();
+            } else if (widened) {
+              log("index.onMessage", `backfillDays widened ${prev.backfillDays}→${next.backfillDays} → clearing lastBackfillSweepAt + queue to trigger immediate re-sweep`);
+              await store.setTimestamp("lastBackfillSweepAt", 0);
+              await store.setTimestamp("backfillSweepFloor", 0);
+              await store.setBackfillQueue([]);
+            }
+            log(
+              "index.onMessage.set-config",
+              `STORED prev=${JSON.stringify(prev)} next=${JSON.stringify(next)} userChanged=${changed} backfillWidened=${widened}`
+            );
+            return { config: next, userChanged: changed, backfillWidened: widened, nextUser: nextU };
+          });
+          if (userChanged) {
             await refreshBadge();
             if (nextUser) {
-              log("index.onMessage", `user-changed → reset throttle + void runRefresh() for user=${nextUser}`);
+              log("index.onMessage", `user-changed → reset throttle + runRefresh(fullDrain=true) for user=${nextUser}`);
               lastForceRefreshAt = 0;
-              void runRefresh();
+              void runRefresh(true);
             }
+          } else if (backfillWidened) {
+            log("index.onMessage", `backfillDays widened → running full catch-up inline`);
+            void (async () => {
+              await withTickLock(async () => {
+                await maybeEnqueueBackfillSweep(store);
+                await drainBackfillQueueCompletely(algoliaClient, store);
+                await refreshBadge();
+              });
+            })();
           }
           await ensureAlarms();
           respond({ ok: true, data: config });
           return;
         }
-        case "force-tick": {
-          await runTick();
-          respond({ ok: true });
-          return;
-        }
         case "force-refresh": {
           await runRefresh();
-          respond({ ok: true });
-          return;
-        }
-        case "force-daily-scan": {
-          await runDaily();
-          respond({ ok: true });
-          return;
-        }
-        case "force-weekly-scan": {
-          await runWeekly();
           respond({ ok: true });
           return;
         }
@@ -727,19 +833,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
         case "reset-all": {
-          await chrome.storage.local.clear();
+          await withTickLock(() => chrome.storage.local.clear());
           await refreshBadge();
           respond({ ok: true });
           return;
         }
         case "clear-read": {
-          const n = await store.clearRead();
+          const n = await withTickLock(() => store.clearRead());
           await refreshBadge();
           respond({ ok: true, data: { dropped: n } });
           return;
         }
         case "clear-all-replies": {
-          const n = await store.clearAllReplies();
+          const n = await withTickLock(() => store.clearAllReplies());
           await refreshBadge();
           respond({ ok: true, data: { dropped: n } });
           return;
@@ -762,13 +868,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case "inspect": {
           const all = await chrome.storage.local.get(null);
           log("index.inspect", `config=${JSON.stringify(all.config)}`);
-          log("index.inspect", `timestamps lastTick=${all.lastTick} lastUserSync=${all.lastUserSync} lastDailyScan=${all.lastDailyScan} lastWeeklyScan=${all.lastWeeklyScan}`);
+          log("index.inspect", `timestamps lastCommentPoll=${all.lastCommentPoll} lastAuthorSync=${all.lastAuthorSync}`);
           const monitored = all.monitored ?? {};
           const mArr = Object.values(monitored);
           log("index.inspect", `monitored count=${mArr.length}`);
           for (const m of mArr) {
             const ageDays = ((Date.now() - m.submittedAt) / 864e5).toFixed(2);
-            log("index.inspect.monitored", `id=${m.id} type=${m.type} ageDays=${ageDays} lastDescendants=${m.lastDescendants} lastKids=${JSON.stringify(m.lastKids)}`);
+            log("index.inspect.monitored", `id=${m.id} type=${m.type} ageDays=${ageDays} title=${JSON.stringify(m.title)}`);
           }
           const replies = all.replies ?? {};
           const rArr = Object.values(replies);
@@ -784,10 +890,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             replyCount: rArr.length,
             unreadCount: unread,
             timestamps: {
-              lastTick: all.lastTick ?? null,
-              lastUserSync: all.lastUserSync ?? null,
-              lastDailyScan: all.lastDailyScan ?? null,
-              lastWeeklyScan: all.lastWeeklyScan ?? null
+              lastCommentPoll: all.lastCommentPoll ?? null,
+              lastAuthorSync: all.lastAuthorSync ?? null
             },
             alarms
           } });
@@ -801,20 +905,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       }
     } catch (err) {
-      logErr("index.onMessage", `kind=${message.kind}`);
+      logErr("index.onMessage", `kind=${message.kind}`, err);
       respond({ ok: false, error: err.message });
     }
   })();
   return true;
 });
+log("index.boot", `loaded`);
 void ensureAlarms();
 void refreshBadge();
 globalThis.__hnswered = {
   store,
   runTick,
   runRefresh,
-  runDaily,
-  runWeekly,
   refreshBadge,
   ensureAlarms
 };

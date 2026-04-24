@@ -11,7 +11,7 @@
  * chrome://extensions → "service worker" devtools (background) and the
  * sidepanel's own devtools (right-click → Inspect). Revert before shipping.
  */
-export const DEBUG = false;
+export const DEBUG = true;
 
 type DataFactory = () => Record<string, unknown>;
 

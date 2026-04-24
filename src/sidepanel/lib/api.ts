@@ -22,7 +22,6 @@ export const api = {
   markAllRead: () => send({ kind: 'mark-all-read' }),
   getConfig: () => send<Config>({ kind: 'get-config' }),
   setConfig: (config: Partial<Config>) => send<Config>({ kind: 'set-config', config }),
-  forceTick: () => send({ kind: 'force-tick' }),
   forceRefresh: () => send({ kind: 'force-refresh' }),
   clearRead: () => send<{ dropped: number }>({ kind: 'clear-read' }),
   clearAllReplies: () => send<{ dropped: number }>({ kind: 'clear-all-replies' }),
@@ -30,9 +29,18 @@ export const api = {
   inspect: () => send({ kind: 'inspect' }),
 };
 
-export function onStorageChanged(cb: () => void): () => void {
-  const listener = (_: unknown, area: string) => {
-    if (area === 'local') cb();
+// Only keys that affect what the sidepanel renders. Timestamps, backfillQueue,
+// backfillSweepFloor, and monitored change far more often than the UI — during a
+// 500-item fullDrain, backfillQueue alone writes 500 times. Filtering here avoids
+// pulling the full replies map through IPC on every tick for no visible change.
+const RENDER_RELEVANT_KEYS = new Set(['replies', 'config']);
+
+export function onStorageChanged(cb: (keys: string[]) => void): () => void {
+  const listener = (changes: Record<string, unknown>, area: string) => {
+    if (area !== 'local') return;
+    const keys = Object.keys(changes).filter((k) => RENDER_RELEVANT_KEYS.has(k));
+    if (keys.length === 0) return;
+    cb(keys);
   };
   chrome.storage.onChanged.addListener(listener);
   return () => chrome.storage.onChanged.removeListener(listener);
