@@ -28,6 +28,15 @@ const DROP_AGE_MS = YEAR_MS;
 const AUTHOR_SYNC_MS = 10 * 60 * 1e3;
 const OVERLAP_MS = 45 * 60 * 1e3;
 const MAX_TICK_MINUTES = Math.floor((OVERLAP_MS - AUTHOR_SYNC_MS) / 6e4);
+function assertCadenceInvariant(overlapMs, authorSyncMs, maxTickMinutes) {
+  const requiredMs = authorSyncMs + maxTickMinutes * 6e4;
+  if (overlapMs < requiredMs) {
+    throw new Error(
+      `cadence invariant violated: OVERLAP_MS=${overlapMs} must be >= AUTHOR_SYNC_MS=${authorSyncMs} + MAX_TICK_MINUTES=${maxTickMinutes}min (required >= ${requiredMs})`
+    );
+  }
+}
+assertCadenceInvariant(OVERLAP_MS, AUTHOR_SYNC_MS, MAX_TICK_MINUTES);
 const FETCH = {
   MAX_RETRIES: 3,
   BACKOFF_BASE_MS: 500,
@@ -35,4 +44,4 @@ const FETCH = {
   TIMEOUT_MS: 15e3};
 
 export { ALGOLIA_HITS_PER_PAGE as A, BACKFILL_DAY_OPTIONS as B, DEFAULT_CONFIG as D, FETCH as F, LOCK as L, MAX_TICK_MINUTES as M, OVERLAP_MS as O, RETENTION as R, ALGOLIA_API as a, DAY_MS as b, AUTHOR_SYNC_MS as c, DROP_AGE_MS as d, ALARM as e };
-//# sourceMappingURL=constants-BRcisosw.js.map
+//# sourceMappingURL=constants-DMzMIS1_.js.map

@@ -972,6 +972,54 @@ test('algolia-client: searchByParent paginates when a page is full (MAX_PAGES ca
   }
 });
 
+test('algolia-client: searchByAuthor paginates both tag queries (story AND comment) past the nbPages=1 lie', async () => {
+  // Mutation M3: searchByAuthor's paginate() stop condition
+  // `data.hits.length < ALGOLIA_HITS_PER_PAGE` — flipping to `<=` would
+  // exit after the first page, silently truncating prolific authors (the
+  // pjmlp nbHits=7681 nbPages=1 case from the research sweep). searchByParent
+  // has a test for this; searchByAuthor did not, and the mutation survived.
+  const realFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (url: string) => {
+    calls.push(url);
+    const pageMatch = url.match(/[&?]page=(\d+)/);
+    const page = pageMatch ? Number(pageMatch[1]) : 0;
+    // Both tag queries paginate identically: page 0 full, page 1 short.
+    const hitsCount = page === 0 ? ALGOLIA_HITS_PER_PAGE : 7;
+    const isStory = url.includes('tags=story');
+    const hits = Array.from({ length: hitsCount }, (_, i) => ({
+      objectID: String(page * ALGOLIA_HITS_PER_PAGE + i + (isStory ? 100_000 : 0)),
+      created_at_i: 1_700_000_000,
+      author: 'pjmlp',
+      title: isStory ? 'x' : undefined,
+      comment_text: isStory ? undefined : 'x',
+      story_id: isStory ? undefined : 42,
+    }));
+    return {
+      ok: true,
+      json: async () => ({ hits, nbPages: 1, page }), // nbPages=1 lie
+    } as Response;
+  }) as typeof fetch;
+  try {
+    const hits = await algoliaClient.searchByAuthor('pjmlp', 0);
+    // 2 full + 2 short pages = 4 fetches; 1000+7+1000+7 = 2014 hits total.
+    assert.equal(calls.length, 4, 'four page requests (2 tags × 2 pages each)');
+    assert.equal(hits.length, ALGOLIA_HITS_PER_PAGE * 2 + 14,
+      `both tag queries drained past page 0 — got ${hits.length}`);
+    // Sanity: each tag fired page 0 and page 1 exactly once.
+    const storyCalls = calls.filter((u) => u.includes('tags=story'));
+    const commentCalls = calls.filter((u) => u.includes('tags=comment'));
+    assert.equal(storyCalls.length, 2, 'story tag: page 0 + page 1');
+    assert.equal(commentCalls.length, 2, 'comment tag: page 0 + page 1');
+    assert.ok(!storyCalls[0].includes('&page='), 'story page 0 omits explicit page param');
+    assert.ok(storyCalls[1].includes('&page=1'));
+    assert.ok(!commentCalls[0].includes('&page='));
+    assert.ok(commentCalls[1].includes('&page=1'));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 test('algolia-client: searchByParent stops at MAX_PAGES=5 even if every page is full', async () => {
   const realFetch = globalThis.fetch;
   let callCount = 0;

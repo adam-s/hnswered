@@ -600,12 +600,29 @@ test('REGRESSION HIGH: drainAll stamps lastBackfillSweepAt=startTime (not now) t
   // Fix: stamp the sweep as having covered only up to drain-START, so the
   // next pollComments' OVERLAP_MS window (45min) can recover anything
   // missed during the drain (as long as drain < OVERLAP_MS).
+  //
+  // Discriminator (per mutation-red-team finding M5): the implementation's
+  // `started` value and its drain-end `nowMs()` must be observably
+  // different, otherwise a `started`/`nowMs()` swap cannot be detected.
+  // We wrap `searchByParent` to advance the fake Date.now on every drain
+  // iteration. After 2 drains, drain-end nowMs ≈ T0+2000, while `started`
+  // is still T0+10. Strict equality to `started` catches the mutation.
   const clock = FakeTimers.install({ now: T0, toFake: ['Date'] });
   const shim = createChromeShim();
   const off = installChromeShim(shim);
   try {
     const store = createStore(shim.storage.local);
     const hn = createFakeHN();
+    // Wrap searchByParent: each call advances the fake Date.now by 1s. Real
+    // setTimeout sleeps in drainBackfillQueueCompletely are unaffected (they
+    // use real wall time and never consult Date.now for timing).
+    const hnWithClock: typeof hn = {
+      ...hn,
+      searchByParent: async (...args) => {
+        clock.tick(1000);
+        return hn.searchByParent(...args);
+      },
+    };
     await store.setConfig({ hnUser: 'alice', backfillDays: 7 });
     await seed(store, [
       { id: 1, ageMs: 1 * DAY_MS },
@@ -614,17 +631,21 @@ test('REGRESSION HIGH: drainAll stamps lastBackfillSweepAt=startTime (not now) t
     await store.setBackfillQueue([1, 2]);
     await store.setTimestamp('backfillSweepFloor', T0 - 7 * DAY_MS);
 
-    const startIso = new Date(T0).toISOString();
-    // Simulate drain taking wall-clock time — advance clock between items.
-    // (drainBackfillQueueCompletely uses real setTimeout we don't fake; we
-    // just check final stamp.)
-    // Replace sleep with a no-op by mocking clock.tick indirectly:
-    // Simply call drainBackfillQueueCompletely — fake-timers handles setTimeout.
-    clock.tick(10); // just past T0
-    await (await import('../../src/background/poller.ts')).drainBackfillQueueCompletely(hn, store);
+    clock.tick(10); // drain starts at T0+10
+    const started = Date.now();
+    await (await import('../../src/background/poller.ts')).drainBackfillQueueCompletely(hnWithClock, store);
+    const drainEnd = Date.now();
+    assert.ok(drainEnd >= started + 2000,
+      `precondition: clock must have advanced during drain — started=${started} end=${drainEnd}`);
 
     const stamp = (await store.getTimestamps()).lastBackfillSweepAt;
-    assert.ok(stamp < T0 + 1000,
-      `stamp=${new Date(stamp).toISOString()} must be near drain-START (${startIso}), NOT far-future drain-end`);
+    // Strict equality. If the implementation stamps `nowMs()` instead of
+    // `started`, stamp === drainEnd (or later). If it stamps `started`, this
+    // passes. The `started`/`drainEnd` gap (2+ seconds of fake-clock) is what
+    // makes the mutation observable — prior version asserted stamp < T0+1000,
+    // which passed against both implementations because Date.now() didn't
+    // advance during the drain (M5 finding).
+    assert.equal(stamp, started,
+      `stamp must equal drain-START exactly (started=${started}) — got ${stamp} (drainEnd=${drainEnd})`);
   } finally { off(); clock.uninstall(); }
 });

@@ -1,4 +1,4 @@
-import { R as RETENTION } from './constants-BRcisosw.js';
+import { R as RETENTION } from './constants-DMzMIS1_.js';
 
 const DEV = false;
 
@@ -7532,4 +7532,4 @@ delegate(['click']);
 const target = document.getElementById("app");
 if (!target) throw new Error("#app not found");
 mount(App, { target });
-//# sourceMappingURL=sidepanel-n6aHmg0T.js.map
+//# sourceMappingURL=sidepanel-bbx9mjBV.js.map
