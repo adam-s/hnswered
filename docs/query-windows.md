@@ -5,14 +5,19 @@ scopes so you don't have to re-derive them from
 [poller.ts](../src/background/poller.ts) +
 [algolia-client.ts](../src/background/algolia-client.ts) every time.
 
-## 1. First-install backfill
+## 1. Backfill catch-up
 
-Runs **once**, on first configure or username change.
+Per-parent Algolia sweep that fills gaps the rolling comment-feed window can't cover. See [design.md §7](../cost-analysis/docs/design.md#7-backfill-catch-up-design) for full design.
 
-- Endpoint: Algolia `search?tags=comment&numericFilters=parent_id=<id>` per item
-- Item scope: each monitored item authored in the past **7 days** (`BACKFILL_AGE_MS = WEEK_MS` in [poller.ts](../src/background/poller.ts))
-- Reply scope: **every direct reply, regardless of age** (no `since` filter)
-- Purpose: avoid an empty sidepanel right after install
+- Endpoint: Algolia `search?tags=comment&numericFilters=parent_id=<id>,created_at_i>since` per parent
+- Item scope: each monitored item authored in the past `backfillDays` (user-configured 7 / 30 / 90, default 7)
+- Reply scope: replies newer than the pinned `backfillSweepFloor` — computed from `max(lastBackfillSweepAt − OVERLAP_MS, now − backfillDays)` at sweep-start
+- Triggers (any of):
+  - First configure / username change (fullDrain, burst)
+  - `backfillDays` widened (fullDrain, burst)
+  - Gap since `lastBackfillSweepAt` exceeds `OVERLAP_MS` (drip, one parent per tick)
+  - `neverSwept` upgrade-in-place case (drip)
+- Drain cadence: one parent per tick (drip) OR all-at-once paced at `DRAIN_ALL_DELAY_MS = 1500ms` (fullDrain, holds `LOCK.TICK` for the duration)
 
 ## 2. Author-sync (populates `monitored`)
 
@@ -34,9 +39,10 @@ Runs on every alarm tick (user-configured `tickMinutes`, default 5, min 1).
 
 ## Coverage implications
 
-- Replies posted **before install**, to items older than 1 week: **never surfaced** — no code path queries them.
-- Replies posted **before install**, to items ≤1 week old: caught by backfill (path 1).
-- Replies posted **after install**: caught by the rolling 45-min poll (path 3), as long as the SW runs at least once every 45 min.
+- Replies posted **before install**, to items older than `backfillDays` (default 7d): **never surfaced** — no code path queries them.
+- Replies posted **before install**, to items ≤ `backfillDays` old: caught by backfill (path 1) on first configure.
+- Replies posted **after install, during normal operation**: caught by the rolling 45-min comment-feed poll (path 3), as long as the SW runs at least once every 45 min.
+- Replies posted **during an offline gap longer than `OVERLAP_MS`**: caught by backfill (path 1), which re-sweeps all monitored parents when the gap is detected.
 
 ## The one correctness knob
 

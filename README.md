@@ -6,7 +6,7 @@ Set your HN username once. HNswered watches the public stories and comments you 
 
 No HN login. No server. No write access. Just public HN data, matched locally.
 
-https://github.com/user-attachments/assets/a577d57c-0c10-4f76-abf9-e51113befbbc
+https://github.com/user-attachments/assets/4cc4a1b6-39b7-4423-89a9-5f41e1b61153
 
 ## What It Does
 
@@ -35,7 +35,7 @@ That's it. No login, no server, no backend you have to trust.
 
 The repo ships a pre-built `dist/`. No Node or build step is required.
 
-<img width="1840" height="470" alt="Five steps to install HNswered: 1. Open chrome://extensions and enable Developer mode. 2. Click &quot;Load unpacked&quot; in the new toolbar. 3. Choose the repository's dist folder, produced by pnpm build. 4. Open the extensions menu and pin HNswered to the toolbar. 5. Enter your Hacker News username — watching starts immediately." src="https://github.com/user-attachments/assets/dc0ea732-b66d-46c8-9a1c-b6a718acb6b3" />
+![Five steps to install HNswered: 1. Open chrome://extensions and enable Developer mode. 2. Click "Load unpacked" in the new toolbar. 3. Choose the repository's dist folder, produced by pnpm build. 4. Open the extensions menu and pin HNswered to the toolbar. 5. Enter your Hacker News username — watching starts immediately.](docs/install.png)
 
 ## For Contributors
 
