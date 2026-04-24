@@ -47,8 +47,6 @@ export interface BgHandle {
   };
   runTick(): Promise<void>;
   runRefresh(): Promise<void>;
-  runDaily(): Promise<void>;
-  runWeekly(): Promise<void>;
 }
 
 export interface Driver {
@@ -80,11 +78,12 @@ export interface StorageSnapshot {
   monitored: unknown;
   replies: unknown;
   timestamps: {
-    lastTick: number | null;
-    lastUserSync: number | null;
-    lastDailyScan: number | null;
-    lastWeeklyScan: number | null;
+    lastCommentPoll: number | null;
+    lastAuthorSync: number | null;
+    lastBackfillSweepAt: number | null;
+    backfillSweepFloor: number | null;
   };
+  backfillQueue: number[];
   // hnRequestCount is intentionally NOT in the snapshot — real-network retries
   // during recording inflate the count vs replay (zero-latency, zero retries),
   // making goldens unstable. Use `driver.hnRequests.length` directly in test
@@ -146,6 +145,20 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
     transport = installFetchTransport({ mode: 'record', tape });
   }
 
+  // Step 3.5: capture SW-side errors. The production `runTick` / `runRefresh`
+  // handlers catch-and-log-and-swallow, so a TapeMiss (or any other failure)
+  // leaves storage in its default/empty state — which happens to match the
+  // empty-state golden. Without this capture, harness:replay would pass on a
+  // genuine regression. We intercept both console.error (from the catch
+  // handlers) and the `logErr` path (which also hits console.error when
+  // DEBUG=true).
+  const capturedErrors: string[] = [];
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    capturedErrors.push(args.map((a) => (a instanceof Error ? a.message : String(a))).join(' '));
+    originalConsoleError(...args);
+  };
+
   // Step 4: dynamic import of unmodified background module.
   const bgUrl = new URL('../../src/background/index.ts', import.meta.url).href;
   await import(bgUrl);
@@ -171,11 +184,12 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
       monitored: all.monitored ?? {},
       replies: all.replies ?? {},
       timestamps: {
-        lastTick: (all.lastTick as number | undefined) ?? null,
-        lastUserSync: (all.lastUserSync as number | undefined) ?? null,
-        lastDailyScan: (all.lastDailyScan as number | undefined) ?? null,
-        lastWeeklyScan: (all.lastWeeklyScan as number | undefined) ?? null,
+        lastCommentPoll: (all.lastCommentPoll as number | undefined) ?? null,
+        lastAuthorSync: (all.lastAuthorSync as number | undefined) ?? null,
+        lastBackfillSweepAt: (all.lastBackfillSweepAt as number | undefined) ?? null,
+        backfillSweepFloor: (all.backfillSweepFloor as number | undefined) ?? null,
       },
+      backfillQueue: (all.backfillQueue as number[] | undefined) ?? [],
     };
   }
 
@@ -196,6 +210,18 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
         // recording, catching any errors before they bite at golden-seeding.
         await (snap ? Promise.resolve(snap) : snapshot());
         return;
+      }
+      // Fail LOUDLY on any SW-side error captured during the scenario — the
+      // production code swallows errors from runTick/runRefresh to keep the
+      // alarm alive, so without this check a replay tape miss (or real
+      // regression) would leave storage in the empty-default state that
+      // happens to match the empty-default golden. Two failures look like
+      // success otherwise.
+      if (capturedErrors.length > 0) {
+        throw new Error(
+          `Harness captured SW-side error(s) during scenario "${opts.scenario}" step "${step}":\n` +
+          capturedErrors.map((e) => `  - ${e}`).join('\n'),
+        );
       }
       const s = snap ?? (await snapshot());
       expectGolden(opts.scenario, step, s);
@@ -235,6 +261,7 @@ export async function createDriver(opts: CreateDriverOptions): Promise<Driver> {
     tape,
     mode: opts.mode,
     async uninstall() {
+      console.error = originalConsoleError;
       transport.uninstall();
       uninstallLocks();
       uninstallShim();

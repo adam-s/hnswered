@@ -8,35 +8,35 @@ https://github.com/user-attachments/assets/a577d57c-0c10-4f76-abf9-e51113befbbc
 
 ```mermaid
 flowchart LR
-    poll["poll HN<br/>every N min"] --> check["re-check every<br/>post or comment<br/>from the past week"]
-    check --> diff{"any new<br/>replies?"}
-    diff -- yes --> show["badge +<br/>side panel"]
-    diff -- no --> done["done"]
+    sync["Algolia author sync<br/>(every ~10 min)"] --> monitored["your items<br/>(flat set)"]
+    poll["Algolia comment feed<br/>(every ~5 min)"] --> filter["filter hits where<br/>parent_id ∈ your items"]
+    filter --> show["badge +<br/>side panel"]
+    monitored -.-> filter
 ```
 
-Every tick re-checks each of your posts and comments from the past week directly — one HN `item` request per monitored item, diff against the prior `kids[]` snapshot, fetch only the new reply ids. Two background scans extend the coverage to older posts — daily over the past week, weekly over the past year.
+One Algolia request (`search_by_date?tags=comment&numericFilters=created_at_i>…`) covers every new comment on HN within the overlap window — detection cost does **not** scale with how many items you monitor. A slower Algolia author-sync populates the monitored set as you post new items. A retrospective sweep of 19,819 parents confirmed Algolia's `parent_id` filter is effectively authoritative (99.99% live agreement against Firebase `kids[]` minus dead/deleted) — see [cost-analysis/docs/reports/report.md](cost-analysis/docs/reports/report.md).
 
-The **refresh** button in the side panel runs the same sweep on demand, bypassing the 30-minute user-sync cooldown so a brand-new post lands in the monitored set immediately.
+The **refresh** button in the side panel runs both passes on demand, bypassing the author-sync cadence gate so a brand-new post lands in the monitored set immediately. Throttled at 10s between clicks.
 
-When you first set your HN username, existing top-level comments on your recent posts are surfaced as replies on the next tick, not silently baselined away. They drain at up to 10/tick (one item at a time) until caught up.
+When you first set your HN username, the author sync pulls your authored items from the last year; replies visible in the Algolia comment feed within the overlap window surface on the next tick.
 
 ## Choosing a poll interval
 
-Every tick re-checks each fast-bucket item (posts/comments from the past week) with one HN request per item, so cost scales with how many items you currently have live. Rough daily footprint assuming ~15 monitored fast-bucket items:
+The Algolia comment feed is one request per tick regardless of how many items you have monitored — cost scales with cadence, not activity. Author-sync adds two requests (stories + comments) per sync cycle.
 
-| Poll every | Requests/day | Bytes/day | Fits |
-|---|---:|---:|---|
-| 1 min | ~22,000 | ~45 MB | near-real-time, very active threads |
-| **5 min** (default) | ~4,500 | ~9 MB | balanced |
-| 15 min | ~1,500 | ~3 MB | battery / data conscious |
-| 30 min | ~750 | ~1.5 MB | low-activity account |
-| 60 min | ~375 | ~0.8 MB | casual checker |
+| Profile | Comment poll | Author sync | Requests/day | Median surface | p95 surface |
+|---|---:|---:|---:|---:|---:|
+| Minimum | 15m | 15m | 192 | 7.7m | 14.4m |
+| **Balanced** (default) | 5m | 10m | 432 | 2.6m | 4.7m |
+| Fast | 3m | 10m | 624 | 1.6m | 2.9m |
+| Faster | 2m | 10m | 864 | 1.0m | 1.9m |
+| Near-realtime | 1m | 2m | 2,160 | 0.5m | 0.9m |
 
-Scales roughly linearly with fast-bucket size. A user with 50 live items at 5-min cadence spends ~15,000 req/day; one with 3 items spends ~900. The every-30-minute "deep sync" that refreshes your submission list adds a few requests on top.
+Overlap window is pinned at 20 minutes — large enough that no reply ages out between author-sync cycles. See [cost-analysis/docs/design.md](cost-analysis/docs/design.md) for the full derivation.
 
 ## Retention
 
-Controls how long **read** replies are kept. Unread replies are never auto-dropped.
+Controls how long **read** replies are kept. Unread replies are never auto-dropped. Pruning runs inside the author-sync cycle (~10 min).
 
 | Retention | Typical footprint | Fits |
 |---|---|---|
@@ -56,13 +56,15 @@ Current usage and a one-click "clear read replies" action live in **Settings →
 
 ## Coverage
 
-Depth in a thread is not a variable. Every item you've authored on HN — story, top-level comment, or a reply buried N levels deep — is a first-class entry in `user.submitted` and becomes a flat node in the monitored set. The poller only diffs each node's *direct* children; it never walks the tree up or down. A reply to your deepest leaf comment is detected identically to a top-level comment on your story.
+Depth in a thread is not a variable. Every item you've authored on HN — story, top-level comment, or a reply buried N levels deep — is a flat node in the monitored set. The poller filters Algolia comment hits by `parent_id ∈ monitored.keys()` — only *direct* descendants surface, never grandchildren. A reply to your deepest leaf comment is detected identically to a top-level comment on your story.
 
 ```mermaid
 flowchart LR
     A["item you authored<br/>(any depth)"] --> M["monitored set<br/>(flat)"]
-    M --> P["diff kids<br/>(one level)"]
-    P --> R["new kids<br/>become replies"]
+    F["Algolia comment hit"] --> Q{"parent_id<br/>in monitored?"}
+    Q -- yes --> R["new reply"]
+    Q -- no --> X["ignore"]
+    M -.-> Q
 ```
 
 ## Install
@@ -81,8 +83,9 @@ pnpm build        # writes dist/
 ## Tests
 
 ```bash
-pnpm test         # unit tests
+pnpm test              # unit tests
 pnpm type-check
+pnpm harness:replay    # deterministic tape replay
 ```
 
 Playwright-driven harnesses:
@@ -93,10 +96,10 @@ node scripts/perf-profile.mjs --label=<name>   # render cost per reply count
 node scripts/impersonate.mjs  --label=<name>   # live-HN smoke test, request-budgeted
 ```
 
-`impersonate` is a **read-only live integration smoke test against Hacker News** — every request is a `GET` to the public Firebase API, nothing is posted, commented, or written back to HN. `--demo=N` is a pipeline proof that doesn't require anyone to actually reply to you:
+`impersonate` is a **read-only live integration smoke test against Hacker News** — every request is a `GET` to the public Firebase or Algolia API, nothing is posted, commented, or written back to HN. `--demo=N` is a pipeline proof that doesn't require anyone to actually reply to you:
 
 1. It fetches `/topstories.json` from HN and picks the top N real stories.
-2. For each, it writes the story into the extension's `monitored` map with an empty `lastKids` baseline — effectively telling the extension *"pretend you are the OP of this story and have never seen any of its comments yet."*
-3. It then forces a tick. The extension's real polling code fetches the story, diffs `[]` against the story's current `kids`, and treats every existing top-level comment as a new reply. Each commenter — the *comment OP* — surfaces in the side panel as someone who just replied to you.
+2. For each, it writes the story into the extension's `monitored` map — effectively telling the extension *"treat these stories as if you authored them."*
+3. It then forces a refresh. The extension's real polling code issues one Algolia comment-feed request and filters to hits whose `parent_id` matches one of the seeded stories. Every recent direct comment on those trending stories surfaces in the side panel as if it were a reply to you.
 
-Every request is real, every comment rendered is a real HN comment on a currently-trending thread. The only fiction is the extension's memory of having seen them before. A `--budget` flag caps total requests so the run can't accidentally pound HN.
+Every request is real, every comment rendered is a real HN comment on a currently-trending thread. The only fiction is the claim that those stories are yours. A `--budget` flag caps total requests so the run can't accidentally pound HN or Algolia.

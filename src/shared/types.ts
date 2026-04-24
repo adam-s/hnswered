@@ -24,18 +24,47 @@ export interface HNUser {
   submitted?: number[];
 }
 
+// Subset of Algolia HN API hit shapes that we consume. See
+// https://hn.algolia.com/api for the full schema.
+
+export interface AlgoliaCommentHit {
+  objectID: string;
+  created_at_i: number;
+  author: string;
+  comment_text: string | null;
+  parent_id: number;
+  story_id?: number;
+}
+
+export interface AlgoliaAuthorHit {
+  objectID: string;
+  created_at_i: number;
+  author: string;
+  _tags?: string[];
+  title?: string;
+  comment_text?: string | null;
+  story_id?: number;
+  parent_id?: number;
+}
+
 export interface Config {
   hnUser: string;
   tickMinutes: number;
   retentionDays: number;
+  // How far back to reach when catching up on replies after an absence (or on
+  // first install). Valid values: 7, 30, 90. The backfill worker only scans
+  // items within this window — anything older is ignored regardless of how
+  // long the extension was offline.
+  backfillDays: number;
 }
 
 export interface MonitoredItem {
   id: number;
   type: 'story' | 'comment';
   submittedAt: number;
-  lastDescendants?: number;
-  lastKids: number[];
+  title?: string;        // set when type=story; parent context for the sidepanel
+  excerpt?: string;      // set when type=comment; truncated parent text
+  parentAuthor?: string; // set when type=comment; author of the comment being replied to
 }
 
 export interface Reply {
@@ -55,11 +84,28 @@ export interface StoreSchema {
   config: Config;
   monitored: Record<string, MonitoredItem>;
   replies: Record<string, Reply>;
-  lastTick: number;
-  lastDailyScan: number;
-  lastWeeklyScan: number;
-  lastUserSync: number;
+  lastCommentPoll: number;
+  lastAuthorSync: number;
+  // Timestamp of the most recent successful backfill "sweep" completion.
+  // The next sweep fetches replies created since max(lastBackfillSweepAt,
+  // now - backfillDays*DAY_MS) — see [poller.ts] backfill logic.
+  lastBackfillSweepAt: number;
+  // **Pinned `since` floor for the currently-active sweep.** Set when the
+  // sweep is enqueued; every `drainOneBackfillItem` call in that sweep uses
+  // this exact value, so long drains don't slide their window forward and
+  // lose coverage of later-in-queue items. Cleared (set to 0) when the queue
+  // empties. 0 means "no sweep in progress".
+  backfillSweepFloor: number;
+  // Parent item IDs awaiting backfill, ordered newest-first by
+  // item.submittedAt at enqueue time. Drip worker pops the head each tick.
+  backfillQueue: number[];
 }
+
+export type TimestampKey =
+  | 'lastCommentPoll'
+  | 'lastAuthorSync'
+  | 'lastBackfillSweepAt'
+  | 'backfillSweepFloor';
 
 export type SidepanelMessage =
   | { kind: 'list-replies' }
@@ -67,10 +113,7 @@ export type SidepanelMessage =
   | { kind: 'mark-all-read' }
   | { kind: 'get-config' }
   | { kind: 'set-config'; config: Partial<Config> }
-  | { kind: 'force-tick' }
   | { kind: 'force-refresh' }
-  | { kind: 'force-daily-scan' }
-  | { kind: 'force-weekly-scan' }
   | { kind: 'get-monitored' }
   | { kind: 'get-storage-stats' }
   | { kind: 'clear-read' }

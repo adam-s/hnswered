@@ -18,12 +18,15 @@ Chrome MV3 extension (Svelte 5 side panel + background SW) watching HN for repli
 ## Load-bearing invariants
 
 - **`self.__hnswered`** in [src/background/index.ts](../src/background/index.ts) — consumed by Playwright harnesses (CDP `evaluate`) AND Node harness (`globalThis` import). Ships in SW scope only.
-- **`hnswered:` prefix** on alarms and `navigator.locks` names — renaming orphans existing users' alarms.
-- **Self-reply filter** (`if (it.by === hnUser) continue`) in [poller.ts](../src/background/poller.ts) — intentional silence. Comment out for manual end-to-end tests; do not delete.
-- **`lastKids = currKids.filter(id => processed.has(id))`** in `poller.ts:checkOne` — do NOT simplify to `= currKids`. Silently buries replies past `MAX_REPLIES_PER_CHECK`. Regression-tested.
-- **Lock modes in [index.ts](../src/background/index.ts).** `runRefresh` acquires `LOCK.TICK` exclusive (queues behind in-flight tick); `runTick` / `runDaily` / `runWeekly` use `{ ifAvailable: true }` (peer fires drop). Never switch `runRefresh` to `ifAvailable` — a user click during an alarm tick MUST do its sync work after, not skip.
-- **Force-refresh vs force-tick.** Refresh bypasses the 30-min sync cooldown (user-initiated); tick honors it. Don't conflate.
-- **No `/v0/updates.json`.** The rolling ~40-id window silently drops replies on low-traffic items. Anti-reference at [poller.ts:252](../src/background/poller.ts#L252) is load-bearing — do not re-introduce.
+- **`hnswered:` prefix** on the alarm key and `navigator.locks` name — renaming orphans existing users' alarms.
+- **Self-reply filter** (case-insensitive `hit.author === hnUser` in `pollComments`) in [poller.ts](../src/background/poller.ts) — intentional silence. Comment out for manual end-to-end tests; do not delete.
+- **Algolia `parent_id` is authoritative for direct descendants.** The retrospective sweep at [cost-analysis/docs/reports/report.md](../cost-analysis/docs/reports/report.md) measured 99.99% live agreement vs. Firebase `kids[]` minus dead/deleted (and Algolia excludes dead/deleted by design — which is what we want). Don't reach for Firebase as a recovery layer without data showing it's actually needed.
+- **`OVERLAP_MS ≥ author-sync cadence + one tick`.** Otherwise a reply on a freshly-authored comment can age out of the overlap window before the next author-sync discovers the parent. `OVERLAP_MS` is pinned at `2× AUTHOR_SYNC_MS` for margin; treat it as the only correctness knob.
+- **Lock mode in [index.ts](../src/background/index.ts).** `runRefresh` acquires `LOCK.TICK` exclusive (queues behind in-flight tick); `runTick` uses `{ ifAvailable: true }` (peer alarm fires drop). Never switch `runRefresh` to `ifAvailable` — a user click during an alarm tick MUST do its sync work after, not skip.
+- **One alarm, internal cadence gates.** `runTick` always runs `pollComments`, and runs `maybeSyncAuthor` only when `lastAuthorSync` is >= `AUTHOR_SYNC_MS` ago. Don't introduce new alarms — the cost is one compound check per tick, the payoff is a single state machine.
+- **Retention pruning rides inside `syncAuthor`.** `pruneReplies` is called at the end of every syncAuthor run (~10-min cadence). There is no separate daily-scan anymore; if syncAuthor stops running, retention stops running.
+- **Force-refresh bypasses the author-sync cadence gate** (calls `syncAuthor` directly, not `maybeSyncAuthor`). Still honors the 10s refresh throttle. Don't conflate the two.
+- **No `/v0/updates.json`.** The rolling ~40-id window silently drops replies on low-traffic items. Don't re-introduce it as a gate or optimization — the Algolia comment feed is strictly better.
 
 ## Tests + build
 
@@ -32,6 +35,8 @@ Chrome MV3 extension (Svelte 5 side panel + background SW) watching HN for repli
 - `pnpm harness:replay` — deterministic tape replay, ~5s.
 - `pnpm impersonate` — Playwright + live HN, budget-bounded, single-user, never loops.
 - `node scripts/audit.mjs && node scripts/audit-analyze.mjs` — bounded multi-user live audit. Invoke via [audit skill](skills/audit/SKILL.md).
+- **`pnpm build` after ANY edit to `src/`** — the user loads the extension from `dist/`. Chrome does not see `src/` changes until `dist/` is rebuilt AND the extension is reloaded in `chrome://extensions`. Type-check passing is not the same as dist reflecting the edit. After the user reloads, also confirm the SW restarted (old SW keeps running the old code until reload).
+- **`DEBUG` in [src/shared/debug.ts](../src/shared/debug.ts)** toggles all `log()` / `logErr()` output. It is `false` in shipped prod; flip to `true` + rebuild when diagnosing live behavior. The user sees *no* console output when `DEBUG=false`, regardless of how much the code calls `log(...)`.
 
 CI at [.github/workflows/ci.yml](../.github/workflows/ci.yml) runs type-check + test + harness:replay on push/PR, ~7s + install. `harness:record` is NOT in CI — hits live HN.
 
@@ -59,7 +64,8 @@ pnpm harness:replay                              # verify
 
 All read-only against production code. Format conventions: [.claude/reference/anthropic-conventions.md](reference/anthropic-conventions.md).
 
-- [red-team-review](skills/red-team-review/SKILL.md) — adversarial bug hunt.
+- [red-team-review](skills/red-team-review/SKILL.md) — adversarial bug hunt of production code.
+- [test-red-team](skills/test-red-team/SKILL.md) — adversarial audit of the test suite (tautologies, shim lies, coverage gaps).
 - [design-critique](skills/design-critique/SKILL.md) — Jony-Ive UI critique.
 - [audit](skills/audit/SKILL.md) — bounded multi-user live audit + divergence analysis.
 
@@ -68,12 +74,13 @@ All read-only against production code. Format conventions: [.claude/reference/an
 Tradeoffs, not oversights:
 
 - **No CAS on `chrome.storage.local` RMW.** Mitigated by `navigator.locks` on `LOCK.TICK`, not eliminated. Per-key lock is the real fix if it bites.
-- **`lastUserSync` updates on forced syncs.** An alarm tick shortly after force-refresh skips its sync. Cooldown measures work done, not intent.
-- **Sidepanel re-renders on every `storage.local` change** including `lastTick`. Churn, not a request storm.
-- **No per-scan request budget.** Individual caps bound worst case; nothing aborts mid-scan if HN is slow and retries compound.
+- **`lastAuthorSync` updates on forced syncs.** An alarm tick shortly after force-refresh skips its author-sync work (cadence gate). Gate measures work done, not intent.
+- **Sidepanel `onStorageChanged` filters to `replies` and `config` only.** Timestamps, `backfillQueue`, `monitored`, `backfillSweepFloor` don't affect render output — ignoring them avoids ~500 IPC list-replies round-trips during a fullDrain.
+- **fullDrain holds `LOCK.TICK` for the full queue.** At 500 items × 1.5s pacing = ~12.5min lock hold, blocking alarm-tick polling throughout. Rolling-cap risk at power-user scale. Releasing the lock mid-drain reintroduces the interleaving concerns the lock was added for (concurrent pollComments mutating `replies`, user-change clearing state mid-drain). Revisit if production telemetry shows Algolia 429s during fullDrain.
+- **No Firebase recovery layer.** Relies entirely on Algolia `parent_id`. Sweep measured 99.99% live agreement, but if real-world usage turns up systematic Algolia index-lag misses, add a daily `/v0/item/<id>.json` cross-check.
+- **No per-scan request budget.** Algolia responses are bounded (1000 hits/page) and `pollComments` makes exactly one request per tick, but a pathological `syncAuthor` with >1000 pages of author history + pagination could burn more than expected. Not currently implemented.
 - **`__hnswered` ships in prod bundle.** SW scope only, not web-reachable.
 - **`lastForceRefreshAt` doesn't survive SW suspension.** Spam-clicking through MV3 suspension bypasses the 10s refresh throttle.
-- **`stoppedAtAge` trusts HN's newest-first `user.submitted` ordering** — undocumented contract.
 - **`DEBUG` in [src/shared/debug.ts](../src/shared/debug.ts)** — `false` in prod; flip to `true` for live diagnosis, revert before shipping.
 
 ## Noise

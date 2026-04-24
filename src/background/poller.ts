@@ -1,65 +1,77 @@
-import type { HNItem, MonitoredItem, Reply } from '../shared/types.ts';
-import { BUCKET, DAY_MS, FETCH, RETENTION } from '../shared/constants.ts';
+// Algolia-first poller.
+//
+// Three work functions, all driven by one alarm tick:
+//
+//   pollComments — every tick. One Algolia comment-feed request covers all of
+//     HN's recent comments within the OVERLAP_MS window; we filter locally to
+//     `parent_id ∈ monitored.keys()` and `author !== hnUser`. The single live
+//     detection path.
+//
+//   syncAuthor — gated externally by AUTHOR_SYNC_MS (except force-refresh,
+//     which bypasses the gate). Two Algolia tag queries populate `monitored`.
+//
+//   maybeEnqueueBackfillSweep + drainOneBackfillItem — the slow-drip catch-up
+//     worker. When `gap = now - lastCommentPoll > OVERLAP_MS` (i.e. the SW was
+//     offline long enough that the rolling 45-min comment-feed window no
+//     longer covers the gap), every monitored item posted within
+//     `config.backfillDays` is enqueued (newest-first). Each subsequent tick
+//     pops one item from the queue and runs `searchByParent(id, since)` with
+//     `since = max(lastBackfillSweepAt, now - backfillDays*DAY_MS)` — so the
+//     query returns only replies posted inside the actual gap, not the item's
+//     full reply history. Queue emptied → `lastBackfillSweepAt = now` so the
+//     next wake knows where to start.
+//
+// Dedupe is free: `store.addReplies` is already idempotent (keyed by reply id).
+// No Firebase recovery layer — the retrospective sweep
+// (cost-analysis/docs/reports/report.md) confirmed 99.99% live agreement
+// between Algolia parent_id and Firebase kids[] minus dead/deleted.
+
+import type { AlgoliaAuthorHit, AlgoliaCommentHit, MonitoredItem, Reply } from '../shared/types.ts';
+import { AUTHOR_SYNC_MS, DAY_MS, DROP_AGE_MS, OVERLAP_MS, RETENTION } from '../shared/constants.ts';
 import { excerptFrom } from '../shared/excerpt.ts';
 import { log } from '../shared/debug.ts';
-import type { HNClient } from './hn-client.ts';
-import { fetchItems } from './hn-client.ts';
-import type { Store } from './store';
-
-export interface PollResult {
-  newReplies: number;
-  itemsChecked: number;
-  skipped: boolean;
-  reason?: string;
-  /** IDs whose checkOne actually ran. Used by callers like runRefresh to avoid
-   *  re-checking items a prior step already covered (e.g., tick skipping items
-   *  that checkFastBucket just processed). */
-  processedIds?: number[];
-}
+import type { AlgoliaClient } from './algolia-client.ts';
+import type { Store } from './store.ts';
 
 const nowMs = () => Date.now();
 
-export function toMonitored(item: HNItem): MonitoredItem | null {
-  if (!item || item.deleted || item.dead) return null;
-  if (item.type !== 'story' && item.type !== 'comment') return null;
-  // Baseline empty so the next checkOne surfaces *all* current direct kids as "new".
-  // Without this, a user who configures their HN username for the first time sees
-  // nothing until brand-new replies land — existing conversations on their posts
-  // are silently swallowed. Rate-limit bounded by MAX_REPLIES_PER_CHECK per tick.
+export interface PollResult {
+  newReplies: number;
+  skipped: boolean;
+  reason?: string;
+}
+
+export function toMonitoredFromAuthorHit(hit: AlgoliaAuthorHit): MonitoredItem | null {
+  const tags = hit._tags ?? [];
+  const isStory = tags.includes('story') || (hit.title != null);
+  const isComment = tags.includes('comment') || (hit.comment_text != null);
+  // Ignore polls, jobs, and anything else — reply-tracking model only fits stories + comments.
+  if (!isStory && !isComment) return null;
+  const type: 'story' | 'comment' = isStory ? 'story' : 'comment';
+  const id = Number(hit.objectID);
+  if (!Number.isFinite(id)) return null;
   return {
-    id: item.id,
-    type: item.type,
-    submittedAt: (item.time ?? Math.floor(nowMs() / 1000)) * 1000,
-    lastDescendants: 0,
-    lastKids: [],
+    id,
+    type,
+    submittedAt: hit.created_at_i * 1000,
+    title: isStory ? hit.title : undefined,
+    excerpt: isComment && hit.comment_text ? excerptFrom(hit.comment_text, 140) : undefined,
   };
 }
 
-export function newKidIds(prev: number[], next: number[]): number[] {
-  const seen = new Set(prev);
-  const out: number[] = [];
-  for (const id of next) if (!seen.has(id)) out.push(id);
-  return out;
-}
-
-export interface ParentContext {
-  title?: string;
-  author?: string;
-  excerpt?: string;
-}
-
-export function toReply(item: HNItem, parent: MonitoredItem, ctx: ParentContext = {}): Reply | null {
-  if (!item || item.deleted || item.dead) return null;
-  if (!item.by || !item.id) return null;
+export function toReplyFromCommentHit(hit: AlgoliaCommentHit, parent: MonitoredItem): Reply | null {
+  if (!hit.author) return null;
+  const id = Number(hit.objectID);
+  if (!Number.isFinite(id)) return null;
   return {
-    id: item.id,
+    id,
     parentItemId: parent.id,
-    parentItemTitle: ctx.title,
-    parentAuthor: ctx.author,
-    parentExcerpt: ctx.excerpt,
-    author: item.by,
-    text: item.text ?? '',
-    time: (item.time ?? 0) * 1000,
+    parentItemTitle: parent.type === 'story' ? parent.title : undefined,
+    parentAuthor: parent.type === 'comment' ? parent.parentAuthor : undefined,
+    parentExcerpt: parent.type === 'comment' ? parent.excerpt : undefined,
+    author: hit.author,
+    text: hit.comment_text ?? '',
+    time: hit.created_at_i * 1000,
     read: false,
     discoveredAt: nowMs(),
   };
@@ -69,296 +81,468 @@ export function ageMs(item: MonitoredItem, now = nowMs()): number {
   return now - item.submittedAt;
 }
 
-export function filterByAge(
-  monitored: Record<string, MonitoredItem>,
-  minAgeMs: number,
-  maxAgeMs: number,
-  now = nowMs(),
-): MonitoredItem[] {
-  const out: MonitoredItem[] = [];
-  for (const m of Object.values(monitored)) {
-    const age = ageMs(m, now);
-    if (age >= minAgeMs && age < maxAgeMs) out.push(m);
-  }
-  return out;
-}
-
-export async function checkOne(
-  client: HNClient,
+export async function pollComments(
+  client: AlgoliaClient,
   store: Store,
-  monitored: MonitoredItem,
-  hnUser: string,
-): Promise<number> {
-  const ageMsNow = nowMs() - monitored.submittedAt;
-  log('poller.checkOne', `ENTER id=${monitored.id} type=${monitored.type} submittedAt=${monitored.submittedAt} ageHrs=${(ageMsNow / 3600000).toFixed(2)} hnUser=${hnUser} prevKidsCount=${(monitored.lastKids ?? []).length} prevKids=${JSON.stringify(monitored.lastKids)} prevDescendants=${monitored.lastDescendants}`);
-  const current = await client.item(monitored.id);
-  if (!current || current.deleted || current.dead) {
-    log('poller.checkOne', `parent-unavailable id=${monitored.id} current=${current === null ? 'null' : JSON.stringify({deleted: current.deleted, dead: current.dead})}`);
-    return 0;
+): Promise<PollResult> {
+  const config = await store.getConfig();
+  if (!config.hnUser) {
+    log('poller.pollComments', `skip reason=no-user`);
+    return { newReplies: 0, skipped: true, reason: 'no-user' };
   }
-  log('poller.checkOne', `parent-fetched id=${monitored.id} by=${current.by} type=${current.type} descendants=${current.descendants} kidsCount=${(current.kids ?? []).length}`);
+  const hnUserLc = config.hnUser.toLowerCase();
+  const monitored = await store.getMonitored();
+  const parentIds = new Set<number>();
+  for (const k of Object.keys(monitored)) {
+    const n = Number(k);
+    if (Number.isFinite(n)) parentIds.add(n);
+  }
+  if (parentIds.size === 0) {
+    log('poller.pollComments', `skip reason=no-monitored user=${config.hnUser}`);
+    await store.setTimestamp('lastCommentPoll', nowMs());
+    return { newReplies: 0, skipped: true, reason: 'no-monitored' };
+  }
+  const sinceSec = Math.floor((nowMs() - OVERLAP_MS) / 1000);
+  log('poller.pollComments', `ENTER user=${config.hnUser} monitoredCount=${parentIds.size} sinceSec=${sinceSec}`);
 
-  const prevKids = monitored.lastKids ?? [];
-  const currKids = current.kids ?? [];
-  const newIds = newKidIds(prevKids, currKids);
-  log('poller.checkOne', `diff id=${monitored.id} prevCount=${prevKids.length} currCount=${currKids.length} newCount=${newIds.length} currKids=${JSON.stringify(currKids)} new=${JSON.stringify(newIds)}`);
-  if (newIds.length === 0) {
-    if ((current.descendants ?? 0) !== (monitored.lastDescendants ?? 0)) {
-      log('poller.checkOne', `descendants-only-changed id=${monitored.id} from=${monitored.lastDescendants} to=${current.descendants} (nested activity, no new direct kids)`);
-      monitored.lastDescendants = current.descendants;
-      await store.upsertMonitored(monitored);
-    } else {
-      log('poller.checkOne', `no-change id=${monitored.id} descendants=${current.descendants}`);
-    }
-    return 0;
-  }
+  const hits = await client.searchComments(sinceSec);
+  log('poller.pollComments', `algolia returned ${hits.length} hits`);
 
-  const capped = newIds.slice(0, FETCH.MAX_REPLIES_PER_CHECK);
-  if (capped.length < newIds.length) {
-    log('poller.checkOne', `cap-applied id=${monitored.id} willFetch=${capped.length} leftover=${newIds.length - capped.length}`);
-  }
-  log('poller.checkOne', `→ fetchItems id=${monitored.id} count=${capped.length} ids=${JSON.stringify(capped)}`);
-  const newItems = await fetchItems(client, capped);
-  log('poller.checkOne', `← fetchItems id=${monitored.id} got=${newItems.length}`);
-  const parentCtx: ParentContext = monitored.type === 'story'
-    ? { title: current.title }
-    : { author: current.by, excerpt: excerptFrom(current.text, 140) };
-  log('poller.checkOne', `parent-ctx id=${monitored.id} ctx=${JSON.stringify(parentCtx)}`);
   const replies: Reply[] = [];
-  const fetchedIds = new Set<number>();
-  let selfSkipped = 0;
-  let deadSkipped = 0;
-  // Case-insensitive comparison: HN usernames are unique and case-preserving, but the
-  // Settings UI does not enforce the user's exact case. If someone types "Alice" and
-  // their handle is "alice", strict-equality would mis-file every real reply as self
-  // (or vice versa). Lowercasing both sides fixes that at the cost of conflating two
-  // distinct-but-differently-cased handles — which HN forbids anyway.
-  const hnUserLc = hnUser.toLowerCase();
-  for (const it of newItems) {
-    fetchedIds.add(it.id);
-    log('poller.checkOne', `consider kid=${it.id} by=${it.by} deleted=${it.deleted} dead=${it.dead} parent=${monitored.id}`);
-    if ((it.by ?? '').toLowerCase() === hnUserLc) {
-      selfSkipped++;
-      log('poller.checkOne', `self-skip kid=${it.id} by=${it.by} hnUser=${hnUser}`);
+  let selfSkip = 0;
+  let notMonitoredSkip = 0;
+  for (const h of hits) {
+    if (!parentIds.has(h.parent_id)) {
+      notMonitoredSkip++;
       continue;
     }
-    const r = toReply(it, monitored, parentCtx);
-    if (r) {
-      replies.push(r);
-      log('poller.checkOne', `accepted kid=${it.id} as reply by=${r.author}`);
-    } else {
-      deadSkipped++;
-      log('poller.checkOne', `dead/deleted-skip kid=${it.id} deleted=${it.deleted} dead=${it.dead}`);
+    if ((h.author ?? '').toLowerCase() === hnUserLc) {
+      selfSkip++;
+      continue;
     }
+    const parent = monitored[String(h.parent_id)];
+    if (!parent) continue;
+    const r = toReplyFromCommentHit(h, parent);
+    if (r) replies.push(r);
   }
-  if (replies.length > 0) {
-    log('poller.checkOne', `→ addReplies id=${monitored.id} count=${replies.length}`);
-    await store.addReplies(replies);
-    log('poller.checkOne', `← addReplies id=${monitored.id} ok`);
-  }
-  log('poller.checkOne', `stored id=${monitored.id} new=${replies.length} selfSkipped=${selfSkipped} deadSkipped=${deadSkipped} fetched=${fetchedIds.size}`);
 
-  // Only mark kids as "seen" that we actually processed, so the leftover slice gets
-  // picked up on the next tick instead of being silently buried.
-  const processed = new Set([...prevKids, ...fetchedIds]);
-  const nextLastKids = currKids.filter((id) => processed.has(id));
-  log('poller.checkOne', `updating-baseline id=${monitored.id} prevKidsCount=${prevKids.length} fetchedCount=${fetchedIds.size} processedCount=${processed.size} nextLastKidsCount=${nextLastKids.length} nextLastKids=${JSON.stringify(nextLastKids)}`);
-  monitored.lastKids = nextLastKids;
-  monitored.lastDescendants = current.descendants;
-  await store.upsertMonitored(monitored);
-  log('poller.checkOne', `EXIT id=${monitored.id} returned=${replies.length}`);
-  return replies.length;
+  let inserted = 0;
+  if (replies.length > 0) {
+    inserted = await store.addReplies(replies);
+    log('poller.pollComments', `candidates=${replies.length} inserted=${inserted} passed to addReplies`);
+  }
+
+  await store.setTimestamp('lastCommentPoll', nowMs());
+  const hitRate = hits.length > 0 ? ((replies.length / hits.length) * 100).toFixed(1) : '0.0';
+  const nextCommentPollFloorIso = new Date(nowMs() - OVERLAP_MS).toISOString();
+  log('poller.pollComments',
+    `EXIT inserted=${inserted} candidates=${replies.length} hits=${hits.length} hitRate=${hitRate}% selfSkip=${selfSkip} notMonitoredSkip=${notMonitoredSkip} ` +
+    `nextWindowStartIso=${nextCommentPollFloorIso}`);
+  // Return `inserted` (actually-new replies), not candidates. Callers use
+  // this for UI status / log summaries.
+  return { newReplies: inserted, skipped: false };
 }
 
-export async function syncUserSubmissions(
-  client: HNClient,
+export async function syncAuthor(
+  client: AlgoliaClient,
   store: Store,
-  username: string,
-  opts: { maxNewItems?: number; force?: boolean } = {},
 ): Promise<number> {
-  const now = nowMs();
-  log('poller.syncUser', `ENTER user=${username} force=${!!opts.force} maxNewItems=${opts.maxNewItems ?? FETCH.MAX_SYNC_ITEMS_PER_CALL}`);
-  if (!opts.force) {
-    const { lastUserSync } = await store.getTimestamps();
-    const age = now - lastUserSync;
-    if (age < FETCH.USER_SYNC_MIN_INTERVAL_MS) {
-      log('poller.syncUser', `GATED user=${username} lastSyncAgeMs=${age} cooldownMs=${FETCH.USER_SYNC_MIN_INTERVAL_MS} lastUserSync=${lastUserSync}`);
-      return 0;
-    }
-    log('poller.syncUser', `cooldown-ok user=${username} lastSyncAgeMs=${age}`);
-  }
-  log('poller.syncUser', `→ client.user(${username})`);
-  const user = await client.user(username);
-  if (!user || !user.submitted) {
-    log('poller.syncUser', `no-submissions user=${username} userObj=${JSON.stringify(user)}`);
+  const config = await store.getConfig();
+  if (!config.hnUser) {
+    log('poller.syncAuthor', `skip reason=no-user`);
     return 0;
   }
-  log('poller.syncUser', `← client.user(${username}) id=${user.id} karma=${user.karma} submittedCount=${user.submitted.length} submitted[:10]=${JSON.stringify(user.submitted.slice(0, 10))}`);
-  const existing = await store.getMonitored();
-  log('poller.syncUser', `existingMonitored count=${Object.keys(existing).length} ids=${JSON.stringify(Object.keys(existing))}`);
-  const dropThreshold = now - BUCKET.DROP_AGE_MS;
-  const cap = opts.maxNewItems ?? FETCH.MAX_SYNC_ITEMS_PER_CALL;
+  const { lastAuthorSync } = await store.getTimestamps();
+  const firstSync = !lastAuthorSync;
+  const now = nowMs();
+  // First sync: pull everything within DROP_AGE_MS so existing authored
+  // content gets tracked immediately. Subsequent syncs: use overlap window
+  // from the previous run, clamped to DROP_AGE_MS.
+  const sinceMs = firstSync
+    ? now - DROP_AGE_MS
+    : Math.max(lastAuthorSync - OVERLAP_MS, now - DROP_AGE_MS);
+  const sinceSec = Math.floor(sinceMs / 1000);
+  log('poller.syncAuthor', `ENTER user=${config.hnUser} firstSync=${firstSync} sinceSec=${sinceSec}`);
+
+  const hits = await client.searchByAuthor(config.hnUser, sinceSec);
+  log('poller.syncAuthor', `algolia returned ${hits.length} author hits`);
+
+  const dropThreshold = now - DROP_AGE_MS;
+  const monitored = await store.getMonitored();
   let added = 0;
-  let fetched = 0;
+  let skippedOld = 0;
   let skippedExisting = 0;
-  let skippedDeleted = 0;
-  let stoppedAtAge = false;
-  for (const id of user.submitted) {
-    if (added >= cap) {
-      log('poller.syncUser', `hit add-cap cap=${cap} added=${added} — stop walking`);
-      break;
+  for (const h of hits) {
+    const m = toMonitoredFromAuthorHit(h);
+    if (!m) continue;
+    if (m.submittedAt < dropThreshold) {
+      skippedOld++;
+      continue;
     }
-    if (fetched >= cap * 2) {
-      log('poller.syncUser', `hit walk-cap walkCap=${cap * 2} fetched=${fetched} — stop walking`);
-      break;
-    }
-    const key = String(id);
-    if (existing[key]) {
+    const key = String(m.id);
+    if (monitored[key]) {
       skippedExisting++;
-      log('poller.syncUser', `skip-existing id=${id}`);
       continue;
     }
-    log('poller.syncUser', `→ client.item(${id})`);
-    const item = await client.item(id);
-    fetched++;
-    if (!item || !item.time) {
-      skippedDeleted++;
-      log('poller.syncUser', `skip-null-or-notime id=${id} item=${JSON.stringify(item)}`);
-      continue;
-    }
-    const itemTime = item.time * 1000;
-    if (itemTime < dropThreshold) {
-      stoppedAtAge = true;
-      log('poller.syncUser', `stop-at-age id=${id} itemTimeMs=${itemTime} dropThresholdMs=${dropThreshold}`);
-      break;
-    }
-    const m = toMonitored(item);
-    if (!m) {
-      skippedDeleted++;
-      log('poller.syncUser', `skip-toMonitored-rejected id=${id} type=${item.type} deleted=${item.deleted} dead=${item.dead}`);
-      continue;
-    }
-    await store.upsertMonitored(m);
+    monitored[key] = m;
     added++;
-    log('poller.syncUser', `ADDED id=${id} type=${m.type} ageDays=${((now - m.submittedAt) / 86400000).toFixed(2)} lastKids=${JSON.stringify(m.lastKids)} lastDescendants=${m.lastDescendants} origKidsOnItem=${(item.kids ?? []).length} origDescendants=${item.descendants}`);
-  }
-  await store.setTimestamp('lastUserSync', now);
-  log('poller.syncUser', `EXIT user=${username} added=${added} fetched=${fetched} skippedExisting=${skippedExisting} skippedDeleted=${skippedDeleted} stoppedAtAge=${stoppedAtAge}`);
-  return added;
-}
-
-// Alarm-driven polling cycle. Syncs the user's new submissions (cooldown-gated)
-// and then checks every monitored item in the fast bucket (age < 1 week) directly.
-// No /v0/updates.json gate — we previously used that feed's narrow rolling window
-// to cheaply filter which items to re-fetch, but it routinely missed replies on
-// low-traffic items (since the feed holds only ~40 globally-changed ids at a
-// time). Direct checks every tick give 100% per-reply catch at the cost of one
-// HN request per fast-bucket item per tick; caps in constants.ts still bound
-// worst-case volume.
-export async function tick(
-  client: HNClient,
-  store: Store,
-): Promise<PollResult> {
-  const config = await store.getConfig();
-  if (!config.hnUser) {
-    log('poller.tick', `skip reason=no-user`);
-    return { newReplies: 0, itemsChecked: 0, skipped: true, reason: 'no-user' };
-  }
-  log('poller.tick', `start user=${config.hnUser}`);
-
-  // Sync first so any brand-new posts enter `monitored` before we check replies.
-  // Cooldown-gated (30min by default) — force-refresh bypasses via runRefresh.
-  await syncUserSubmissions(client, store, config.hnUser);
-
-  const res = await checkFastBucket(client, store);
-  await store.setTimestamp('lastTick', nowMs());
-  log('poller.tick', `done newReplies=${res.newReplies} itemsChecked=${res.itemsChecked}`);
-  return res;
-}
-
-// Checks every monitored item in the fast bucket (age < 1 week) directly, with
-// no gating. Called by tick() on every alarm fire and by runRefresh on every
-// user click. Bounded by |fast bucket| × O(1 + MAX_REPLIES_PER_CHECK) requests.
-export async function checkFastBucket(
-  client: HNClient,
-  store: Store,
-): Promise<PollResult> {
-  log('poller.checkFastBucket', `ENTER`);
-  const config = await store.getConfig();
-  if (!config.hnUser) {
-    log('poller.checkFastBucket', `skip reason=no-user config=${JSON.stringify(config)}`);
-    return { newReplies: 0, itemsChecked: 0, skipped: true, reason: 'no-user', processedIds: [] };
-  }
-  const monitored = await store.getMonitored();
-  const now = nowMs();
-  const allIds = Object.keys(monitored);
-  log('poller.checkFastBucket', `monitored-snapshot user=${config.hnUser} totalCount=${allIds.length} ids=${JSON.stringify(allIds)}`);
-  for (const m of Object.values(monitored)) {
-    const ageH = ((now - m.submittedAt) / 3600000).toFixed(2);
-    log('poller.checkFastBucket', `item id=${m.id} type=${m.type} ageHrs=${ageH} withinFastBucket=${now - m.submittedAt < BUCKET.FAST_MAX_AGE_MS} lastKidsCount=${(m.lastKids ?? []).length}`);
-  }
-  const targets = filterByAge(monitored, 0, BUCKET.FAST_MAX_AGE_MS);
-  log('poller.checkFastBucket', `targets=${targets.length} ids=${JSON.stringify(targets.map((m) => m.id))} fastMaxAgeMs=${BUCKET.FAST_MAX_AGE_MS}`);
-  let total = 0;
-  const processedIds: number[] = [];
-  for (const m of targets) {
-    log('poller.checkFastBucket', `→ checkOne id=${m.id}`);
-    const n = await checkOne(client, store, m, config.hnUser);
-    log('poller.checkFastBucket', `← checkOne id=${m.id} newReplies=${n}`);
-    processedIds.push(m.id);
-    total += n;
-  }
-  log('poller.checkFastBucket', `EXIT newReplies=${total} itemsChecked=${targets.length} processedIds=${JSON.stringify(processedIds)}`);
-  return { newReplies: total, itemsChecked: targets.length, skipped: false, processedIds };
-}
-
-export async function scanBucket(
-  client: HNClient,
-  store: Store,
-  minAgeMs: number,
-  maxAgeMs: number,
-  stampKey: 'lastDailyScan' | 'lastWeeklyScan',
-): Promise<PollResult> {
-  const config = await store.getConfig();
-  if (!config.hnUser) {
-    log('poller.scanBucket', `skip stampKey=${stampKey} reason=no-user`);
-    return { newReplies: 0, itemsChecked: 0, skipped: true, reason: 'no-user' };
-  }
-  log('poller.scanBucket', `start stampKey=${stampKey} minAgeMs=${minAgeMs} maxAgeMs=${maxAgeMs}`);
-
-  await syncUserSubmissions(client, store, config.hnUser);
-  const monitored = await store.getMonitored();
-  const targets = filterByAge(monitored, minAgeMs, maxAgeMs);
-  log('poller.scanBucket', `bucket stampKey=${stampKey} monitored=${Object.keys(monitored).length} targets=${targets.length} targetIds=${JSON.stringify(targets.map((m) => m.id))}`);
-
-  let total = 0;
-  for (const m of targets) {
-    total += await checkOne(client, store, m, config.hnUser);
   }
 
-  const now = nowMs();
+  if (added > 0) {
+    await store.setMonitored(monitored);
+  }
+
+  // Age-based eviction of monitored items.
   const toDrop: number[] = [];
   for (const m of Object.values(monitored)) {
-    if (ageMs(m, now) >= BUCKET.DROP_AGE_MS) toDrop.push(m.id);
+    if (ageMs(m, now) >= DROP_AGE_MS) toDrop.push(m.id);
   }
   if (toDrop.length > 0) {
-    log('poller.scanBucket', `drop-expired stampKey=${stampKey} count=${toDrop.length} ids=${JSON.stringify(toDrop)}`);
     await store.removeMonitored(toDrop);
   }
 
-  // Daily scan is also the cadence for reply retention sweep.
-  if (stampKey === 'lastDailyScan') {
-    const retentionDays = Math.max(1, Number(config.retentionDays) || 30);
-    const dropped = await store.pruneReplies({
-      readOlderThanMs: retentionDays * DAY_MS,
-      hardCap: RETENTION.HARD_REPLY_CAP,
-      orphanedIfMonitoredMissing: true,
-      now,
-    });
-    log('poller.scanBucket', `prune retentionDays=${retentionDays} dropped=${dropped}`);
+  // Retention pruning of stored replies — runs every syncAuthor cycle
+  // (~10min cadence). Drops read replies past retentionDays, orphaned read
+  // replies, and hard-capped overflow.
+  const retentionDays = Math.max(1, Number(config.retentionDays) || 30);
+  const dropped = await store.pruneReplies({
+    readOlderThanMs: retentionDays * DAY_MS,
+    hardCap: RETENTION.HARD_REPLY_CAP,
+    orphanedIfMonitoredMissing: true,
+    now,
+  });
+  if (dropped > 0) log('poller.syncAuthor', `pruned ${dropped} replies retentionDays=${retentionDays}`);
+
+  await store.setTimestamp('lastAuthorSync', now);
+  log('poller.syncAuthor', `EXIT added=${added} skippedOld=${skippedOld} skippedExisting=${skippedExisting} dropped=${toDrop.length}`);
+  return added;
+}
+
+// Gated version for alarm-driven ticks. runRefresh (user click) calls
+// syncAuthor directly, bypassing the gate.
+export async function maybeSyncAuthor(client: AlgoliaClient, store: Store): Promise<number> {
+  const { lastAuthorSync } = await store.getTimestamps();
+  const now = nowMs();
+  const age = now - lastAuthorSync;
+  if (lastAuthorSync > 0 && age < AUTHOR_SYNC_MS) {
+    const nextEligibleAt = lastAuthorSync + AUTHOR_SYNC_MS;
+    const msUntilEligible = nextEligibleAt - now;
+    log('poller.maybeSyncAuthor',
+      `gated age=${age} cadence=${AUTHOR_SYNC_MS} msUntilEligible=${msUntilEligible} nextEligibleIso=${new Date(nextEligibleAt).toISOString()}`);
+    return 0;
+  }
+  return syncAuthor(client, store);
+}
+
+// ---------------------------------------------------------------------------
+// Backfill sweep — "catch up after absence"
+// ---------------------------------------------------------------------------
+
+function backfillDepthMs(config: { backfillDays?: number }): number {
+  const days = Math.max(1, Number(config.backfillDays) || 7);
+  return days * DAY_MS;
+}
+
+/** Compute the time floor for the next backfill sweep.
+ *
+ *   sinceMs = min(now, max(lastBackfillSweepAt, now - backfillDays*DAY_MS))
+ *
+ * - On first install (lastBackfillSweepAt=0): returns `now - depth`.
+ * - After an absence: returns the later of "last completed sweep" and "depth
+ *   ago" — so long absences don't force us to look further back than
+ *   `backfillDays`, and brief absences only fetch replies within the gap.
+ * - `min(now, ...)` floor-clamps future timestamps (lastBackfillSweepAt > now)
+ *   caused by system-clock rollback or VM sleep/restore. Without the clamp,
+ *   `since` could be in the future and Algolia would return zero hits forever.
+ *
+ * Exported for tests.
+ */
+export function computeBackfillSinceMs(opts: {
+  now: number;
+  lastBackfillSweepAt: number;
+  backfillDays: number;
+}): number {
+  const depthMs = Math.max(1, opts.backfillDays) * DAY_MS;
+  return Math.min(opts.now, Math.max(opts.lastBackfillSweepAt, opts.now - depthMs));
+}
+
+/** Enqueue pending backfill work if a gap is detected. A "gap" means
+ * `now - lastCommentPoll > OVERLAP_MS` — the rolling comment-feed window
+ * alone can no longer recover missed replies.
+ *
+ * Items already in the queue are preserved (not duplicated). Newly-enqueued
+ * items go at the head, newest-submitted first, so recently-authored items —
+ * the ones most likely to still be receiving replies — drain first.
+ *
+ * Returns the number of items newly enqueued. No-op when no gap, no user,
+ * or no eligible monitored items.
+ */
+export async function maybeEnqueueBackfillSweep(store: Store, now = nowMs()): Promise<number> {
+  const config = await store.getConfig();
+  if (!config.hnUser) return 0;
+  const { lastCommentPoll, lastBackfillSweepAt, backfillSweepFloor } = await store.getTimestamps();
+  const gap = now - lastCommentPoll;
+  // Trigger on EITHER:
+  //   (a) absence (gap > OVERLAP_MS): rolling comment-feed window can no
+  //       longer recover missed replies.
+  //   (b) never-swept state (lastBackfillSweepAt == 0) while there are
+  //       monitored items: covers first install AND extension-upgrade on a
+  //       user who had monitored items before the backfill feature existed
+  //       (lastCommentPoll is current, but no sweep has ever run).
+  const neverSwept = lastBackfillSweepAt === 0;
+  const absence = lastCommentPoll > 0 && gap > OVERLAP_MS;
+  const firstPoll = lastCommentPoll === 0;
+  if (!neverSwept && !absence && !firstPoll) {
+    return 0;
   }
 
-  await store.setTimestamp(stampKey, now);
-  log('poller.scanBucket', `done stampKey=${stampKey} newReplies=${total} itemsChecked=${targets.length}`);
-  return { newReplies: total, itemsChecked: targets.length, skipped: false };
+  // **Sweep-in-progress handling.** Two distinct cases:
+  //
+  //  (i)  `neverSwept` or `firstPoll` while queue is non-empty: this is the
+  //       steady state of an in-progress sweep that hasn't yet completed.
+  //       Re-enqueuing would re-add drained items (they're still in
+  //       monitored), pinning the queue at its original size forever. SKIP.
+  //
+  //  (ii) `absence` (real new gap > OVERLAP_MS) while queue is non-empty:
+  //       the in-progress sweep's floor is based on pre-gap state and its
+  //       already-drained items DID NOT see replies that arrived during the
+  //       new gap. We must INVALIDATE the sweep: lower the floor to include
+  //       the gap, clear the queue, and re-enqueue all in-window items so
+  //       every monitored parent is re-checked with the widened floor.
+  //       addReplies dedupes existing stored replies, so over-fetching is
+  //       harmless; under-fetching would be a correctness bug.
+  const existingQueue = await store.getBackfillQueue();
+  const invalidateDueToAbsence = absence && existingQueue.length > 0;
+  if (existingQueue.length > 0 && !invalidateDueToAbsence) {
+    log('poller.maybeEnqueueBackfillSweep',
+      `skip reason=sweep-in-progress queueLen=${existingQueue.length}`);
+    return 0;
+  }
+  if (invalidateDueToAbsence) {
+    log('poller.BACKFILL.invalidate',
+      `reason=absence-during-sweep gap=${gap} queueLen-was=${existingQueue.length} — re-enqueueing all in-window items with widened floor`);
+  }
+  const depthMs = backfillDepthMs(config);
+  const cutoff = now - depthMs;
+  const monitored = await store.getMonitored();
+  // Queue is either empty (normal enqueue) or about to be replaced wholesale
+  // (absence-invalidation path). Either way we take the full in-window set.
+  const candidates = Object.values(monitored)
+    .filter((m) => m.submittedAt >= cutoff)
+    .sort((a, b) => b.submittedAt - a.submittedAt)
+    .map((m) => m.id);
+  if (candidates.length === 0) return 0;
+
+  // **Pin `since` floor for this sweep.** Without this, a drip that takes
+  // multiple hours/days would compute `since` per-drain — `now - depth` slides
+  // forward, and items drained later in the sweep would miss replies that
+  // landed inside the original catch-up window. Fix: compute the floor once
+  // at enqueue, persist it, consume it in every drain of this sweep, clear
+  // when queue empties. If a fresh enqueue lands while a sweep is still in
+  // progress, take the OLDER of the two floors to preserve full coverage
+  // (over-fetching is harmless because addReplies is idempotent).
+  const newFloor = computeBackfillSinceMs({ now, lastBackfillSweepAt, backfillDays: Number(config.backfillDays) || 7 });
+  const pinnedFloor = backfillSweepFloor > 0
+    ? Math.min(backfillSweepFloor, newFloor)
+    : newFloor;
+  if (pinnedFloor !== backfillSweepFloor) {
+    await store.setTimestamp('backfillSweepFloor', pinnedFloor);
+  }
+
+  // Queue was asserted empty at the top of this function; write the fresh
+  // candidates, ordered newest-first by submittedAt (which the filter above
+  // already enforced via `.sort`).
+  const nextQueue = candidates;
+  await store.setBackfillQueue(nextQueue);
+  const trigger = firstPoll ? 'first-poll' : neverSwept ? 'never-swept' : 'absence';
+  // BACKFILL-prefixed lines are the user-facing "proof it's working" channel.
+  // Each line tells a self-contained story that can be grepped without context.
+  log('poller.BACKFILL.enqueue',
+    `trigger=${trigger} enqueued=${candidates.length} queueTotal=${nextQueue.length} depth=${Number(config.backfillDays) || 7}d floorIso=${new Date(pinnedFloor).toISOString()} windowDaysBack=${((now - pinnedFloor) / DAY_MS).toFixed(2)}`);
+  log('poller.maybeEnqueueBackfillSweep',
+    `gap=${gap} cutoff=${cutoff} pinnedFloor=${pinnedFloor} enqueued=${candidates.length} queueTotal=${nextQueue.length}`);
+  return candidates.length;
+}
+
+/** Pop one item from the backfill queue, run `searchByParent` with a
+ * `since` filter so Algolia returns only replies newer than the last
+ * completed sweep, and `addReplies` the result.
+ *
+ * When the queue drains to empty, `lastBackfillSweepAt` is advanced to `now`
+ * — the next wake will use this as its floor.
+ *
+ * Returns the number of replies surfaced (0 if queue empty or parent evicted).
+ */
+export async function drainOneBackfillItem(
+  client: AlgoliaClient,
+  store: Store,
+  now = nowMs(),
+  // Optional pre-fetched monitored map. `drainBackfillQueueCompletely` reads
+  // monitored once and passes it in to avoid an O(N) JSON parse per drained
+  // parent — at 5000 monitored items × 500 queue entries that saves several
+  // hundred MB of deserialize traffic. Monitored is not mutated during drain.
+  monitoredCache?: Record<string, MonitoredItem>,
+): Promise<number> {
+  const queue = await store.getBackfillQueue();
+  if (queue.length === 0) return 0;
+  const config = await store.getConfig();
+  if (!config.hnUser) return 0;
+  const [head, ...rest] = queue;
+  const monitored = monitoredCache ?? await store.getMonitored();
+  const parent = monitored[String(head)];
+  const { lastBackfillSweepAt, backfillSweepFloor } = await store.getTimestamps();
+  if (!parent) {
+    // Parent was evicted since enqueue (age-based DROP_AGE_MS drop, or user
+    // changed). Silently skip and persist shortened queue.
+    await store.setBackfillQueue(rest);
+    log('poller.drainOneBackfillItem', `parent=${head} evicted — dropped from queue`);
+    if (rest.length === 0) {
+      await store.setTimestamp('lastBackfillSweepAt', now);
+      await store.setTimestamp('backfillSweepFloor', 0);
+    }
+    return 0;
+  }
+  // Use the pinned floor if a sweep is active; otherwise fall back to the
+  // windowed computation (defensive — `drainOneBackfillItem` should not be
+  // called with a non-empty queue but no pinned floor, though a forced
+  // setBackfillQueue from outside could set up that state).
+  const sweepFloorMs = backfillSweepFloor > 0
+    ? backfillSweepFloor
+    : computeBackfillSinceMs({
+        now,
+        lastBackfillSweepAt,
+        backfillDays: Number(config.backfillDays) || 7,
+      });
+  // **Per-parent incremental floor — only trusted after the FIRST completed
+  // sweep.** The optimization advances `since` past the newest stored reply
+  // for this parent, saving Algolia bandwidth when we already have coverage.
+  // BUT: a single stored reply does NOT prove continuous coverage back to the
+  // sweep floor. On a fresh user change, `clearPerUserState` wipes storage,
+  // `pollComments` surfaces a few recent replies from the 45-min window,
+  // then backfill runs. If we used per-parent here, a single 10-min-old
+  // reply on parent X would trick us into asking Algolia only for replies
+  // newer than 10 min — missing the historical 7-day window entirely.
+  //
+  // Guard: `lastBackfillSweepAt > 0` means a prior sweep completed, which IS
+  // proof that we have continuous coverage from `lastBackfillSweepAt` to now.
+  // Only under that condition can we advance past the newest stored reply.
+  // Per-parent cursor optimization was removed. The invariant it needed —
+  // continuous coverage from sweep floor to the newest-stored-reply for each
+  // parent — is not preserved across an `absence` invalidation: a wake-up
+  // `pollComments` stores recent replies in the 45-min window, those are
+  // newer than the absence-lowered sweep floor, and per-parent would have
+  // wrongly skipped the gap interval for each parent. Always use the sweep
+  // floor. Over-fetching is dedup'd by `addReplies`; correctness > speed.
+  const sinceMs = sweepFloorMs;
+  const sinceSec = Math.floor(sinceMs / 1000);
+  const hits = await client.searchByParent(head, sinceSec);
+  const hnUserLc = config.hnUser.toLowerCase();
+  const replies: Reply[] = [];
+  for (const h of hits) {
+    if ((h.author ?? '').toLowerCase() === hnUserLc) continue;
+    const r = toReplyFromCommentHit(h, parent);
+    if (r) replies.push(r);
+  }
+  const inserted = replies.length > 0 ? await store.addReplies(replies) : 0;
+  await store.setBackfillQueue(rest);
+  // One high-signal line per drain — proves backfill is doing real work,
+  // and distinguishes "Algolia returned N hits" (fetched) from "N of those
+  // were actually new" (surfaced). If `inserted` is consistently 0 while
+  // `hits` > 0, live polling is already keeping up; the drip is a safety net.
+  // Verdict + ETA: if `inserted === 0 && hits.length > 0 && replies.length < hits.length`,
+  // some hits were filtered out before addReplies (self-author, or invalid
+  // toReplyFromCommentHit → null). Distinguish those cases from "pure dupes".
+  const filtered = hits.length - replies.length;
+  let verdict: string;
+  if (inserted > 0) verdict = `SURFACED ${inserted} new`;
+  else if (hits.length === 0) verdict = 'no-hits';
+  else if (filtered > 0 && replies.length === 0) verdict = `no-new (all ${filtered} filtered: self/invalid)`;
+  else if (filtered > 0) verdict = `no-new (${replies.length} dupes + ${filtered} filtered)`;
+  else verdict = `no-new (all ${replies.length} dupes)`;
+  log('poller.BACKFILL.drain',
+    `parent=${head} sinceSec=${sinceSec} fetched=${hits.length} candidates=${replies.length} ${verdict} queueRemaining=${rest.length}`);
+  if (rest.length === 0) {
+    // Sweep complete. Advance `lastBackfillSweepAt` to `now` so the next
+    // sweep computes its floor from this point, and clear the pinned floor
+    // so it doesn't contaminate a future sweep (which will pin a fresh
+    // value at enqueue time).
+    await store.setTimestamp('lastBackfillSweepAt', now);
+    await store.setTimestamp('backfillSweepFloor', 0);
+    log('poller.BACKFILL.complete',
+      `sweep drained — lastBackfillSweepAt=${new Date(now).toISOString()}, floor cleared. ` +
+      `Next enqueue fires only on gap>${OVERLAP_MS / 60000}min OR user/data change.`);
+  }
+  log('poller.drainOneBackfillItem',
+    `parent=${head} sinceSec=${sinceSec} hits=${hits.length} candidates=${replies.length} inserted=${inserted} queueRemaining=${rest.length}`);
+  return inserted;
+}
+
+/** Drain the entire queue in one go. Used when the user explicitly widens
+ * `backfillDays` — they expect the new window to take effect on save, not
+ * drip in over 30 minutes. Bounded only by queue length × per-request time
+ * (~300-900ms per Algolia call).
+ *
+ * Returns total replies surfaced across all drained items. Callers should
+ * invoke this inside `LOCK.TICK` so a concurrent alarm tick doesn't race
+ * with the drain loop.
+ */
+/** Spacing between drain-all iterations. Algolia is rate-sensitive under
+ * sustained sequential load; 1.5s per call keeps us well below the per-IP
+ * ceiling observed during the research sweep. Politeness matters more than
+ * speed here — this is user-initiated catch-up, not live polling. */
+export const DRAIN_ALL_DELAY_MS = 1500;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+export async function drainBackfillQueueCompletely(
+  client: AlgoliaClient,
+  store: Store,
+): Promise<{ itemsProcessed: number; repliesSurfaced: number }> {
+  let itemsProcessed = 0;
+  let repliesSurfaced = 0;
+  const started = nowMs();
+  // Cache monitored once — it isn't mutated during drain (syncAuthor can't run,
+  // we hold LOCK.TICK). Passed into each drainOneBackfillItem call.
+  const monitoredCache = await store.getMonitored();
+  const initialLen = (await store.getBackfillQueue()).length;
+  log('poller.BACKFILL.drainAll.start',
+    `queueLen=${initialLen} delayMs=${DRAIN_ALL_DELAY_MS} etaMinutes=${((initialLen * DRAIN_ALL_DELAY_MS) / 60_000).toFixed(1)}`);
+  while (true) {
+    const queueBefore = await store.getBackfillQueue();
+    if (queueBefore.length === 0) break;
+    const inserted = await drainOneBackfillItem(client, store, nowMs(), monitoredCache);
+    itemsProcessed++;
+    repliesSurfaced += inserted;
+    if (itemsProcessed > 5000) {
+      log('poller.BACKFILL.drainAll.abort', `itemsProcessed=${itemsProcessed} — aborting runaway drain`);
+      break;
+    }
+    const queueAfter = await store.getBackfillQueue();
+    if (queueAfter.length > 0) {
+      await sleep(DRAIN_ALL_DELAY_MS);
+    }
+  }
+  // CRITICAL: stamp `lastBackfillSweepAt = started`, NOT `nowMs()`. During
+  // the drain we held LOCK.TICK; alarm-driven pollComments ticks coalesced
+  // (dropped via `ifAvailable`). Any reply to any of our monitored items
+  // arriving AFTER `started` was not observed by live polling and was
+  // caught (or missed) by backfill based on when each individual parent
+  // was drained. Setting the stamp to `started` means the next sweep's
+  // floor begins from when we BEGAN this catch-up — so the subsequent
+  // pollComments OVERLAP_MS window has a chance to cover anything we
+  // missed during the drain. Setting it to `now` would silently skip the
+  // drain-duration interval forever.
+  const queueAtEnd = await store.getBackfillQueue();
+  if (queueAtEnd.length === 0) {
+    // drainOneBackfillItem already advanced the stamp to `now` when the
+    // queue emptied. Overwrite with `started` to reflect the actual
+    // coverage horizon.
+    await store.setTimestamp('lastBackfillSweepAt', started);
+    log('poller.BACKFILL.drainAll.stamp',
+      `lastBackfillSweepAt rewound to drain-start=${new Date(started).toISOString()} (not drain-end) so post-drain pollComments can recover missed replies`);
+  }
+  const durationMs = nowMs() - started;
+  log('poller.BACKFILL.drainAll.done',
+    `itemsProcessed=${itemsProcessed} repliesSurfaced=${repliesSurfaced} durationMs=${durationMs}`);
+  return { itemsProcessed, repliesSurfaced };
 }

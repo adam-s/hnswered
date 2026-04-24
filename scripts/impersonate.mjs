@@ -23,9 +23,10 @@
  *                                 [--headless=true] [--budget=200] [--windowMs=60000]
  *                                 [--demo=3]
  *
- * --demo=N: seeds N top stories into the monitored set with lastKids=[] so the next
- *          daily-scan treats all existing comments as "new replies". Proves end-to-end
- *          detection without waiting for real-time activity.
+ * --demo=N: seeds N top stories into the monitored set so the next force-refresh
+ *          treats all recent comments on those stories (within the Algolia
+ *          overlap window) as "new replies". Proves end-to-end detection
+ *          without waiting for real-time activity.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -97,8 +98,7 @@ async function seedDemoStories(ext, n) {
       id: item.id,
       type: item.type === 'story' ? 'story' : 'comment',
       submittedAt: (item.time ?? Math.floor(Date.now() / 1000)) * 1000,
-      lastKids: [], // zero baseline → scan sees every existing kid as "new"
-      lastDescendants: 0,
+      title: item.title,
     });
   }
   await ext.sw.evaluate(async (items) => {
@@ -116,32 +116,21 @@ async function runUser(ext, username, mode) {
 
   let seeded = [];
   if (DEMO > 0) {
-    console.log(`  [demo] seeding ${DEMO} top stories with lastKids=[] ...`);
+    console.log(`  [demo] seeding ${DEMO} top stories ...`);
     seeded = await seedDemoStories(ext, DEMO);
     console.log(`    seeded: ${seeded.map((s) => s.id).join(', ')}`);
   }
 
   const t0 = Date.now();
 
-  console.log(`  force-tick...`);
-  const tickStart = ext.hnRequests.length;
-  const tickRes = await ext.send({ kind: 'force-tick' });
-  const tickReqs = ext.hnRequests.length - tickStart;
-  console.log(`    ${tickReqs} requests, ok=${tickRes?.ok}`);
-
-  await new Promise((r) => setTimeout(r, 500));
-
-  console.log(`  force-daily-scan...`);
-  const dailyStart = ext.hnRequests.length;
-  const dailyRes = await ext.send({ kind: 'force-daily-scan' });
-  const dailyReqs = ext.hnRequests.length - dailyStart;
-  console.log(`    ${dailyReqs} requests, ok=${dailyRes?.ok}`);
-
-  console.log(`  force-weekly-scan...`);
-  const weeklyStart = ext.hnRequests.length;
-  const weeklyRes = await ext.send({ kind: 'force-weekly-scan' });
-  const weeklyReqs = ext.hnRequests.length - weeklyStart;
-  console.log(`    ${weeklyReqs} requests, ok=${weeklyRes?.ok}`);
+  // One force-refresh runs syncAuthor + pollComments. The old three-step
+  // force-tick / force-daily-scan / force-weekly-scan dance is gone — the
+  // Algolia-first design has no age-bucket scans.
+  console.log(`  force-refresh...`);
+  const refreshStart = ext.hnRequests.length;
+  const refreshRes = await ext.send({ kind: 'force-refresh' });
+  const refreshReqs = ext.hnRequests.length - refreshStart;
+  console.log(`    ${refreshReqs} requests, ok=${refreshRes?.ok}`);
 
   // Optional quiet observation window — badge should reflect state.
   const observeUntil = Date.now() + WINDOW_MS;
@@ -153,13 +142,17 @@ async function runUser(ext, username, mode) {
   const replies = await ext.send({ kind: 'list-replies' });
 
   const now = Date.now();
-  const buckets = { fastWeek: 0, daily: 0, weekly: 0 };
+  // Informational age histogram — Algolia-first design does not bucket-scan,
+  // but the age distribution of monitored items is still useful to eyeball
+  // during an impersonate run.
+  const ageHist = { under1d: 0, under1w: 0, under30d: 0, under365d: 0 };
   const DAY = 86400_000;
   for (const m of monitored?.data ?? []) {
     const age = now - m.submittedAt;
-    if (age < 7 * DAY) buckets.fastWeek++;
-    else if (age < 30 * DAY) buckets.daily++;
-    else buckets.weekly++;
+    if (age < DAY) ageHist.under1d++;
+    else if (age < 7 * DAY) ageHist.under1w++;
+    else if (age < 30 * DAY) ageHist.under30d++;
+    else ageHist.under365d++;
   }
 
   console.log(`  summary: monitored=${monitored?.data?.length ?? 0} replies=${replies?.data?.length ?? 0} totalReqs=${ext.hnRequests.length}`);
@@ -174,7 +167,7 @@ async function runUser(ext, username, mode) {
     elapsed_ms: Date.now() - t0,
     monitoredCount: monitored?.data?.length ?? 0,
     repliesCount: replies?.data?.length ?? 0,
-    buckets,
+    ageHist,
     oldestMonitoredAgeDays: (monitored?.data ?? []).reduce(
       (acc, m) => Math.max(acc, (now - m.submittedAt) / DAY),
       0,
@@ -186,9 +179,7 @@ async function runUser(ext, username, mode) {
       time: r.time,
     })),
     requests: {
-      tick: tickReqs,
-      daily: dailyReqs,
-      weekly: weeklyReqs,
+      refresh: refreshReqs,
       totalAtEnd: ext.hnRequests.length,
     },
   };

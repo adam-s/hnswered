@@ -32,7 +32,7 @@ export async function launchWithExtension({ headless = true, logRequests = false
   if (logRequests) {
     context.on('request', (req) => {
       const url = req.url();
-      if (url.includes('hacker-news.firebaseio.com')) {
+      if ((url.includes('hacker-news.firebaseio.com') || url.includes('hn.algolia.com'))) {
         hnRequests.push({ url, ts: Date.now() });
       }
     });
@@ -41,8 +41,9 @@ export async function launchWithExtension({ headless = true, logRequests = false
       const cdp = await context.newCDPSession(sw);
       await cdp.send('Network.enable');
       cdp.on('Network.requestWillBeSent', (e) => {
-        if (e.request.url.includes('hacker-news.firebaseio.com')) {
-          hnRequests.push({ url: e.request.url, ts: Date.now(), source: 'sw' });
+        const u = e.request.url;
+        if (u.includes('hacker-news.firebaseio.com') || u.includes('hn.algolia.com')) {
+          hnRequests.push({ url: u, ts: Date.now(), source: 'sw' });
         }
       });
     } catch {}
@@ -85,17 +86,8 @@ export async function launchWithExtension({ headless = true, logRequests = false
               await H.ensureAlarms();
               return { ok: true, data: cfg };
             }
-            case 'force-tick':
-              await H.runTick();
-              return { ok: true };
             case 'force-refresh':
               await H.runRefresh();
-              return { ok: true };
-            case 'force-daily-scan':
-              await H.runDaily();
-              return { ok: true };
-            case 'force-weekly-scan':
-              await H.runWeekly();
               return { ok: true };
             case 'get-monitored': {
               const monitored = await H.store.getMonitored();
@@ -138,10 +130,8 @@ export async function launchWithExtension({ headless = true, logRequests = false
                 replyCount: rArr.length,
                 unreadCount: rArr.filter((r) => !r.read).length,
                 timestamps: {
-                  lastTick: all.lastTick ?? null,
-                  lastUserSync: all.lastUserSync ?? null,
-                  lastDailyScan: all.lastDailyScan ?? null,
-                  lastWeeklyScan: all.lastWeeklyScan ?? null,
+                  lastCommentPoll: all.lastCommentPoll ?? null,
+                  lastAuthorSync: all.lastAuthorSync ?? null,
                 },
                 alarms,
               }};

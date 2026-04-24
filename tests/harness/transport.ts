@@ -33,8 +33,13 @@
  *   harness driver in scenarios that exercise such tapes.
  */
 
-const HN_PREFIX = 'https://hacker-news.firebaseio.com/';
+const HN_FIREBASE_PREFIX = 'https://hacker-news.firebaseio.com/';
+const HN_ALGOLIA_PREFIX = 'https://hn.algolia.com/';
 const TEXT_TRUNCATE_LEN = 10;
+
+function isHnUrl(url: string): boolean {
+  return url.startsWith(HN_FIREBASE_PREFIX) || url.startsWith(HN_ALGOLIA_PREFIX);
+}
 
 export interface TapeCall {
   url: string;
@@ -99,10 +104,9 @@ export function installFetchTransport(opts: InstallReplayOptions | InstallRecord
 
   const wrapped: typeof fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
-    const isHn = url.startsWith(HN_PREFIX);
-    if (!isHn) {
+    if (!isHnUrl(url)) {
       // Pass through anything not pointed at HN (defensive — production code
-      // currently only fetches HN URLs).
+      // currently only fetches HN Firebase + Algolia URLs).
       return realFetch(input as RequestInfo, init);
     }
     hnRequests.push(url);
@@ -171,8 +175,9 @@ export function installFetchTransport(opts: InstallReplayOptions | InstallRecord
   };
 }
 
-/** Walk a JSON-shaped value and truncate any `text` string field to TEXT_TRUNCATE_LEN
- *  chars, recording the original length under `__textTruncatedFrom`. Mutation-free. */
+/** Walk a JSON-shaped value and truncate any large text field (Firebase `text`,
+ *  Algolia `comment_text`) to TEXT_TRUNCATE_LEN chars, recording the original
+ *  length under `__textTruncatedFrom` / `__commentTextTruncatedFrom`. Mutation-free. */
 function truncateText(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(truncateText);
   if (v && typeof v === 'object') {
@@ -181,6 +186,9 @@ function truncateText(v: unknown): unknown {
       if (k === 'text' && typeof val === 'string' && val.length > TEXT_TRUNCATE_LEN) {
         out[k] = val.slice(0, TEXT_TRUNCATE_LEN);
         out.__textTruncatedFrom = val.length;
+      } else if (k === 'comment_text' && typeof val === 'string' && val.length > TEXT_TRUNCATE_LEN) {
+        out[k] = val.slice(0, TEXT_TRUNCATE_LEN);
+        out.__commentTextTruncatedFrom = val.length;
       } else {
         out[k] = truncateText(val);
       }

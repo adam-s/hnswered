@@ -1,335 +1,2765 @@
 {
+  "backfillQueue": [],
   "config": {
+    "backfillDays": 7,
     "hnUser": "mfiguiere",
     "retentionDays": 30,
     "tickMinutes": 5
   },
   "monitored": {
+    "43786111": {
+      "id": 43786111,
+      "submittedAt": 1745520622000,
+      "title": "Trends in AI Supercomputers",
+      "type": "story"
+    },
+    "43786514": {
+      "id": 43786514,
+      "submittedAt": 1745522909000,
+      "title": "PyGraph: Robust Compiler Support for CUDA Graphs in PyTorch",
+      "type": "story"
+    },
+    "43790763": {
+      "id": 43790763,
+      "submittedAt": 1745562772000,
+      "title": "Apple Aims to Build Most iPhones for US in India by End of 2026",
+      "type": "story"
+    },
+    "43798162": {
+      "id": 43798162,
+      "submittedAt": 1745612599000,
+      "title": "DoorDash Offers to Buy UK-Based Deliveroo for $3.6B",
+      "type": "story"
+    },
+    "43800191": {
+      "id": 43800191,
+      "submittedAt": 1745632078000,
+      "title": "xAI Is in Discussions to Raise $20B",
+      "type": "story"
+    },
+    "43812780": {
+      "id": 43812780,
+      "submittedAt": 1745769158000,
+      "title": "Apple Begins Breaking Up Its AI Team with Robotics, Siri Changes",
+      "type": "story"
+    },
+    "43817377": {
+      "id": 43817377,
+      "submittedAt": 1745812606000,
+      "title": "Inference-Aware Fine-Tuning for Best-of-N Sampling in Large Language Models",
+      "type": "story"
+    },
+    "43822346": {
+      "id": 43822346,
+      "submittedAt": 1745852996000,
+      "title": "RDNA4 Instruction Set Architecture [pdf]",
+      "type": "story"
+    },
+    "43822719": {
+      "id": 43822719,
+      "submittedAt": 1745854949000,
+      "title": "MIT 6.S191 (Comet ML): A Hipocratic Oath, for Your AI [video]",
+      "type": "story"
+    },
+    "43823932": {
+      "id": 43823932,
+      "submittedAt": 1745861696000,
+      "title": "Microsoft's Datacenter Freeze – 1.5GW Self-Build Slowdown Misconceptions",
+      "type": "story"
+    },
+    "43824024": {
+      "id": 43824024,
+      "submittedAt": 1745862258000,
+      "title": "How Meta Understands Data at Scale",
+      "type": "story"
+    },
+    "43834020": {
+      "id": 43834020,
+      "submittedAt": 1745940650000,
+      "title": "LlamaCon 2025 Keynote Livestream [video]",
+      "type": "story"
+    },
+    "43838050": {
+      "id": 43838050,
+      "submittedAt": 1745960847000,
+      "title": "Mark Zuckerberg – Llama 4, DeepSeek, AI Friends, & Race to AGI [video]",
+      "type": "story"
+    },
+    "43850060": {
+      "id": 43850060,
+      "submittedAt": 1746043521000,
+      "title": "Microsoft Earnings Release FY25 Q3",
+      "type": "story"
+    },
+    "43862244": {
+      "id": 43862244,
+      "submittedAt": 1746127625000,
+      "title": "Google Voice gets support for three way calling and a refreshed in-call UI",
+      "type": "story"
+    },
+    "43862726": {
+      "id": 43862726,
+      "submittedAt": 1746129899000,
+      "title": "Amazon.com Announces Q1 2025 Results",
+      "type": "story"
+    },
+    "43863013": {
+      "id": 43863013,
+      "submittedAt": 1746131452000,
+      "title": "Apple reports Q2 2025 results",
+      "type": "story"
+    },
+    "43865626": {
+      "id": 43865626,
+      "submittedAt": 1746153454000,
+      "title": "Apple updates App Store Guidelines to allow links to external payments",
+      "type": "story"
+    },
+    "43866489": {
+      "id": 43866489,
+      "submittedAt": 1746164026000,
+      "title": "Link Out for In-App Purchases",
+      "type": "story"
+    },
+    "43872947": {
+      "id": 43872947,
+      "submittedAt": 1746208757000,
+      "title": "Apple, Anthropic Team Up to Build AI-Powered 'Vibe-Coding' Platform",
+      "type": "story"
+    },
+    "43880973": {
+      "id": 43880973,
+      "submittedAt": 1746296214000,
+      "title": "Buffett to step down following six-decade run atop Berkshire",
+      "type": "story"
+    },
+    "43891325": {
+      "id": 43891325,
+      "submittedAt": 1746410620000,
+      "title": "CUDA 12.9 Release Notes",
+      "type": "story"
+    },
+    "43896029": {
+      "id": 43896029,
+      "submittedAt": 1746458369000,
+      "title": "MIT 6.S191: AI for Biology [video]",
+      "type": "story"
+    },
+    "43897775": {
+      "id": 43897775,
+      "submittedAt": 1746468538000,
+      "title": "OpenAI says nonprofit will retain control of company",
+      "type": "story"
+    },
+    "43900463": {
+      "id": 43900463,
+      "submittedAt": 1746488336000,
+      "title": "Analyzing Modern Nvidia GPU Cores",
+      "type": "story"
+    },
+    "43901593": {
+      "id": 43901593,
+      "submittedAt": 1746502404000,
+      "title": "Google has launched new film and TV production wing",
+      "type": "story"
+    },
+    "43901896": {
+      "id": 43901896,
+      "submittedAt": 1746506905000,
+      "title": "Microsoft Is Key Holdout for OpenAI Restructuring Plan",
+      "type": "story"
+    },
+    "43902308": {
+      "id": 43902308,
+      "submittedAt": 1746512824000,
+      "title": "DoorDash to acquire Deliveroo",
+      "type": "story"
+    },
+    "43905245": {
+      "id": 43905245,
+      "submittedAt": 1746540152000,
+      "title": "Function Calling Using LLMs",
+      "type": "story"
+    },
+    "43907903": {
+      "id": 43907903,
+      "submittedAt": 1746554426000,
+      "title": "PDF generation now available in beta in Grok Studio",
+      "type": "story"
+    },
+    "43908726": {
+      "id": 43908726,
+      "submittedAt": 1746559546000,
+      "title": "To Speed Up AI, Just Outsource Memory",
+      "type": "story"
+    },
+    "43908770": {
+      "id": 43908770,
+      "submittedAt": 1746559858000,
+      "title": "Will supercapacitors come to AI's rescue?",
+      "type": "story"
+    },
+    "43909269": {
+      "id": 43909269,
+      "submittedAt": 1746563032000,
+      "title": "AMD Reports Q1 2025 Financial Results",
+      "type": "story"
+    },
+    "43916200": {
+      "id": 43916200,
+      "submittedAt": 1746628225000,
+      "title": "Netflix Is Getting a New Look",
+      "type": "story"
+    },
+    "43916254": {
+      "id": 43916254,
+      "submittedAt": 1746628417000,
+      "title": "Google agrees to fund the development of three new nuclear sites",
+      "type": "story"
+    },
+    "43916905": {
+      "id": 43916905,
+      "submittedAt": 1746631367000,
+      "title": "Apple Working to Move to AI Search in Browser Amid Google Fallout",
+      "type": "story"
+    },
+    "43918315": {
+      "id": 43918315,
+      "submittedAt": 1746638227000,
+      "title": "Google searches are falling in Safari for the first time ever",
+      "type": "story"
+    },
+    "43918504": {
+      "id": 43918504,
+      "submittedAt": 1746639266000,
+      "title": "Netflix debuts its generative AI-powered search tool",
+      "type": "story"
+    },
+    "43920120": {
+      "id": 43920120,
+      "submittedAt": 1746648660000,
+      "title": "CrowdStrike announces 5% job cuts, says AI is 'reshaping every industry'",
+      "type": "story"
+    },
+    "43920154": {
+      "id": 43920154,
+      "submittedAt": 1746648866000,
+      "title": "Stripe: We built a transformer-based payments foundation model",
+      "type": "story"
+    },
+    "43920272": {
+      "id": 43920272,
+      "submittedAt": 1746649917000,
+      "title": "Microsoft wins appeal in FTC challenge to $69B Activision Blizzard deal",
+      "type": "story"
+    },
+    "43920801": {
+      "id": 43920801,
+      "submittedAt": 1746653750000,
+      "title": "xAI to Use Tesla Batteries at Memphis Supercomputer",
+      "type": "story"
+    },
+    "43921058": {
+      "id": 43921058,
+      "submittedAt": 1746655950000,
+      "title": "Searching and Detecting Similar Communities in Large Information Networks [pdf]",
+      "type": "story"
+    },
+    "43922130": {
+      "id": 43922130,
+      "submittedAt": 1746666922000,
+      "title": "Apple Asks Court to Pause Order That Would Upend Its US App Store Business",
+      "type": "story"
+    },
+    "43922709": {
+      "id": 43922709,
+      "submittedAt": 1746673624000,
+      "title": "Apple Tries to Save $20B Google Search Deal by Saying It's Unnecessary",
+      "type": "story"
+    },
+    "43931779": {
+      "id": 43931779,
+      "submittedAt": 1746741472000,
+      "title": "Apple Is Developing Specialized Chips for Glasses, New Macs and AI Servers",
+      "type": "story"
+    },
+    "43932079": {
+      "id": 43932079,
+      "submittedAt": 1746744001000,
+      "title": "GPT-4.1 is now generally available in GitHub Copilot as the new default model",
+      "type": "story"
+    },
+    "43937887": {
+      "id": 43937887,
+      "submittedAt": 1746804432000,
+      "title": "Qwen Web Dev",
+      "type": "story"
+    },
+    "43939617": {
+      "id": 43939617,
+      "submittedAt": 1746814418000,
+      "title": "New Tool: lsds – List All Linux Block Devices and Settings in One Place",
+      "type": "story"
+    },
+    "43941719": {
+      "id": 43941719,
+      "submittedAt": 1746831619000,
+      "title": "Google agrees to pay $1.4B data privacy settlement to Texas",
+      "type": "story"
+    },
+    "43947892": {
+      "id": 43947892,
+      "submittedAt": 1746902682000,
+      "title": "Are Joins over LSM-trees Ready? [pdf]",
+      "type": "story"
+    },
+    "43949207": {
+      "id": 43949207,
+      "submittedAt": 1746913052000,
+      "title": "Producing useful commands on the go using C++ and AI",
+      "type": "story"
+    },
+    "43949233": {
+      "id": 43949233,
+      "submittedAt": 1746913270000,
+      "title": "Mixture-of-Transformers: Sparse and Scalable Architecture for Multi-Modal Models",
+      "type": "story"
+    },
+    "43949630": {
+      "id": 43949630,
+      "submittedAt": 1746917077000,
+      "title": "FTC delays enforcement of click-to-cancel rule until July 14",
+      "type": "story"
+    },
+    "43950555": {
+      "id": 43950555,
+      "submittedAt": 1746927789000,
+      "title": "We're missing (at least one) major paradigm for LLM learning",
+      "type": "story"
+    },
+    "43962229": {
+      "id": 43962229,
+      "submittedAt": 1747053194000,
+      "title": "Apple Considers Raising iPhone Prices, Without Blaming Tariffs",
+      "type": "story"
+    },
+    "43962276": {
+      "id": 43962276,
+      "submittedAt": 1747053636000,
+      "title": "Official releases of the quantized models of Qwen3",
+      "type": "story"
+    },
+    "43964224": {
+      "id": 43964224,
+      "submittedAt": 1747064215000,
+      "title": "SoftBank Stargate venture with OpenAI snags on tariff fears",
+      "type": "story"
+    },
+    "43964306": {
+      "id": 43964306,
+      "submittedAt": 1747064563000,
+      "title": "Chegg to lay off 22% of workforce",
+      "type": "story"
+    },
+    "43964958": {
+      "id": 43964958,
+      "submittedAt": 1747068060000,
+      "title": "Perplexity wrapping talks to raise $500M at $14B valuation",
+      "type": "story"
+    },
+    "43965608": {
+      "id": 43965608,
+      "submittedAt": 1747071757000,
+      "title": "HealthBench – An evaluation for AI systems and human health",
+      "type": "story"
+    },
+    "43965933": {
+      "id": 43965933,
+      "submittedAt": 1747073484000,
+      "title": "Google just changed its 'G' logo",
+      "type": "story"
+    },
+    "43966161": {
+      "id": 43966161,
+      "submittedAt": 1747074864000,
+      "title": "Apple Plans AI-Powered Battery Management Mode for Devices in iOS 19",
+      "type": "story"
+    },
+    "43967365": {
+      "id": 43967365,
+      "submittedAt": 1747083244000,
+      "title": "State AI Regulation Ban Tucked into Republican Tax, Fiscal Bill",
+      "type": "story"
+    },
+    "43967624": {
+      "id": 43967624,
+      "submittedAt": 1747085285000,
+      "title": "Coinbase set to join S&P 500",
+      "type": "story"
+    },
+    "43967899": {
+      "id": 43967899,
+      "submittedAt": 1747087570000,
+      "title": "You can now export your deep research reports as well-formatted PDFs",
+      "type": "story"
+    },
+    "43969594": {
+      "id": 43969594,
+      "submittedAt": 1747109485000,
+      "title": "Google Facing at Least €12B in Civil Claims Across Europe",
+      "type": "story"
+    },
+    "43973851": {
+      "id": 43973851,
+      "submittedAt": 1747149285000,
+      "title": "Deep Research on Qwen Chat is now live and available for everyone",
+      "type": "story"
+    },
+    "43976116": {
+      "id": 43976116,
+      "submittedAt": 1747161020000,
+      "title": "Audible is giving publishers AI tools to quickly make more audiobooks",
+      "type": "story"
+    },
+    "43976507": {
+      "id": 43976507,
+      "submittedAt": 1747163550000,
+      "title": "Building, launching, and scaling ChatGPT Images",
+      "type": "story"
+    },
+    "43977428": {
+      "id": 43977428,
+      "submittedAt": 1747168601000,
+      "title": "Chime S-1",
+      "type": "story"
+    },
+    "43978339": {
+      "id": 43978339,
+      "submittedAt": 1747174386000,
+      "title": "Eliminating Array Bounds Checks",
+      "type": "story"
+    },
+    "43978485": {
+      "id": 43978485,
+      "submittedAt": 1747175490000,
+      "title": "Google might replace the 'I'm Feeling Lucky' button with AI Mode",
+      "type": "story"
+    },
+    "43986677": {
+      "id": 43986677,
+      "submittedAt": 1747241462000,
+      "title": "Apple Readies Feature That Lets Vision Pro Users Scroll with Their Eyes",
+      "type": "story"
+    },
+    "43988735": {
+      "id": 43988735,
+      "submittedAt": 1747253869000,
+      "title": "LangChain4j 1.0.0",
+      "type": "story"
+    },
+    "43990343": {
+      "id": 43990343,
+      "submittedAt": 1747266063000,
+      "title": "CoreWeave to spend up to $23B this year to tap AI demand boom",
+      "type": "story"
+    },
+    "43998384": {
+      "id": 43998384,
+      "submittedAt": 1747336937000,
+      "title": "Meta Is Delaying the Rollout of Its Flagship AI Model",
+      "type": "story"
+    },
+    "44016807": {
+      "id": 44016807,
+      "submittedAt": 1747514050000,
+      "title": "Laser-powered fusion experiment more than doubles its power output",
+      "type": "story"
+    },
+    "44021967": {
+      "id": 44021967,
+      "submittedAt": 1747581158000,
+      "title": "Towards a JSON API for the JDK",
+      "type": "story"
+    },
+    "44023590": {
+      "id": 44023590,
+      "submittedAt": 1747594970000,
+      "title": "OpenAI's Strategy for ChatGPT (2024)",
+      "type": "story"
+    },
+    "44024322": {
+      "id": 44024322,
+      "submittedAt": 1747602505000,
+      "title": "Why Apple Still Hasn't Cracked AI",
+      "type": "story"
+    },
+    "44025120": {
+      "id": 44025120,
+      "submittedAt": 1747611357000,
+      "title": "Obviously, OpenAI will monetize with ads",
+      "type": "story"
+    },
+    "44025461": {
+      "id": 44025461,
+      "submittedAt": 1747614920000,
+      "title": "EUV Photoresists: The Next Generation? [video]",
+      "type": "story"
+    },
+    "44026257": {
+      "id": 44026257,
+      "submittedAt": 1747624364000,
+      "title": "Nvidia to ship new AI chip for China next quarter, modified Blackwell later",
+      "type": "story"
+    },
+    "44031387": {
+      "id": 44031387,
+      "submittedAt": 1747671275000,
+      "title": "xAI's Grok 3 comes to Microsoft Azure",
+      "type": "story"
+    },
+    "44034127": {
+      "id": 44034127,
+      "submittedAt": 1747684608000,
+      "title": "Apple's $100B-a-Year App Store Will Never Be the Same",
+      "type": "story"
+    },
+    "44034511": {
+      "id": 44034511,
+      "submittedAt": 1747686739000,
+      "title": "Google Decided Against Offering Publishers Options in AI Search",
+      "type": "story"
+    },
+    "44036393": {
+      "id": 44036393,
+      "submittedAt": 1747699929000,
+      "title": "Google Translate Now Available as Default Translation App on iPhone and iPad",
+      "type": "story"
+    },
+    "44043618": {
+      "id": 44043618,
+      "submittedAt": 1747760229000,
+      "title": "Google I/O '25 Keynote [video]",
+      "type": "story"
+    },
+    "44044367": {
+      "id": 44044367,
+      "submittedAt": 1747765247000,
+      "title": "Google AI Ultra",
+      "type": "story"
+    },
+    "44045749": {
+      "id": 44045749,
+      "submittedAt": 1747773965000,
+      "title": "Gemini AI app has 400M monthly active users",
+      "type": "story"
+    },
+    "44045914": {
+      "id": 44045914,
+      "submittedAt": 1747775091000,
+      "title": "Intel explores sale of networking and edge unit",
+      "type": "story"
+    },
+    "44048419": {
+      "id": 44048419,
+      "submittedAt": 1747803402000,
+      "title": "Taming the Bias: Unbiased* Safepoint-Based Stack Walking in JFR",
+      "type": "story"
+    },
+    "44051733": {
+      "id": 44051733,
+      "submittedAt": 1747837270000,
+      "title": "Devstral",
+      "type": "story"
+    },
+    "44053331": {
+      "id": 44053331,
+      "submittedAt": 1747845823000,
+      "title": "Journey to 1000 models: Scaling Instagram's recommendation system",
+      "type": "story"
+    },
+    "44059124": {
+      "id": 44059124,
+      "submittedAt": 1747892981000,
+      "title": "What Sam Altman Told OpenAI About the Secret Device He's Making with Jony Ive",
+      "type": "story"
+    },
+    "44062105": {
+      "id": 44062105,
+      "submittedAt": 1747922242000,
+      "title": "Apple, Tesla and Nvidia Shares to Trade as Digital Tokens on Kraken",
+      "type": "story"
+    },
+    "44070216": {
+      "id": 44070216,
+      "submittedAt": 1747979339000,
+      "title": "AMD vs. Nvidia Inference Benchmark: Performance and Cost per Million Tokens",
+      "type": "story"
+    },
+    "44076218": {
+      "id": 44076218,
+      "submittedAt": 1748031235000,
+      "title": "Salesforce Is Back in Talks to Acquire Informatica",
+      "type": "story"
+    },
+    "44078275": {
+      "id": 44078275,
+      "submittedAt": 1748053297000,
+      "title": "AMD Previews Mysterious Linux Runtime Stack for Ryzen AI NPUs",
+      "type": "story"
+    },
+    "44081894": {
+      "id": 44081894,
+      "submittedAt": 1748102154000,
+      "title": "Apple Better Off Taking 25% Tariff Hit Than Move iPhone Production to US",
+      "type": "story"
+    },
+    "44088255": {
+      "id": 44088255,
+      "submittedAt": 1748184662000,
+      "title": "Jony Ive's OpenAI Deal Puts Pressure on Apple to Find Next Big Thing",
+      "type": "story"
+    },
+    "44102399": {
+      "id": 44102399,
+      "submittedAt": 1748300397000,
+      "title": "AI, Assembly, and the Art of Project Stewardship",
+      "type": "story"
+    },
+    "44107006": {
+      "id": 44107006,
+      "submittedAt": 1748353797000,
+      "title": "Claude 4 and Anthropic's bet on code",
+      "type": "story"
+    },
+    "44107632": {
+      "id": 44107632,
+      "submittedAt": 1748357952000,
+      "title": "Salesforce to acquire Informatica in $8B deal",
+      "type": "story"
+    },
+    "44108198": {
+      "id": 44108198,
+      "submittedAt": 1748361518000,
+      "title": "XFS Atomic Writes Support Merged for Linux 6.16",
+      "type": "story"
+    },
+    "44108980": {
+      "id": 44108980,
+      "submittedAt": 1748367073000,
+      "title": "Texas Adopts Online Child-Safety Bill Opposed by Apple's CEO",
+      "type": "story"
+    },
+    "44112218": {
+      "id": 44112218,
+      "submittedAt": 1748398515000,
+      "title": "Using Postgres pg_test_fsync tool for testing low latency writes",
+      "type": "story"
+    },
+    "44116337": {
+      "id": 44116337,
+      "submittedAt": 1748442207000,
+      "title": "DataStax Officially Joins IBM",
+      "type": "story"
+    },
+    "44117968": {
+      "id": 44117968,
+      "submittedAt": 1748450927000,
+      "title": "Reed Hastings appointed to Anthropic's board of directors",
+      "type": "story"
+    },
+    "44118110": {
+      "id": 44118110,
+      "submittedAt": 1748451554000,
+      "title": "Linux 6.16 Adds x86_NATIVE_CPU Option to Optimize Your Kernel Build for Your CPU",
+      "type": "story"
+    },
+    "44118541": {
+      "id": 44118541,
+      "submittedAt": 1748453770000,
+      "title": "American Decel",
+      "type": "story"
+    },
+    "44119254": {
+      "id": 44119254,
+      "submittedAt": 1748457803000,
+      "title": "Apple to Rebrand Its Device Operating Systems to Mark Major Overhaul",
+      "type": "story"
+    },
+    "44119311": {
+      "excerpt": "> Other",
+      "id": 44119311,
+      "submittedAt": 1748458053000,
+      "type": "comment"
+    },
+    "44120329": {
+      "id": 44120329,
+      "submittedAt": 1748463841000,
+      "title": "Nvidia Announces Financial Results for First Quarter Fiscal 2026",
+      "type": "story"
+    },
+    "44121181": {
+      "id": 44121181,
+      "submittedAt": 1748470974000,
+      "title": "On average Hyperscalers are deploying 1k GB200 NVL72 racks (72k GPUs) per week",
+      "type": "story"
+    },
+    "44123563": {
+      "id": 44123563,
+      "submittedAt": 1748499309000,
+      "title": "STOC Best Paper Award: How to Find the Shortest Path – Faster",
+      "type": "story"
+    },
+    "44126313": {
+      "id": 44126313,
+      "submittedAt": 1748527774000,
+      "title": "IntelliJ Idea 2025.1 Model Context Protocol",
+      "type": "story"
+    },
+    "44129023": {
+      "id": 44129023,
+      "submittedAt": 1748544756000,
+      "title": "Germany eyes 10% digital tax on tech giants",
+      "type": "story"
+    },
+    "44129122": {
+      "id": 44129122,
+      "submittedAt": 1748545415000,
+      "title": "Sources, Bytecode, Debugging",
+      "type": "story"
+    },
+    "44132161": {
+      "id": 44132161,
+      "submittedAt": 1748571280000,
+      "title": "What If AI Had Come First?",
+      "type": "story"
+    },
+    "44132721": {
+      "id": 44132721,
+      "submittedAt": 1748577758000,
+      "title": "The Proposed US Tax Regime for Non-US Investors and Companies",
+      "type": "story"
+    },
+    "44139454": {
+      "id": 44139454,
+      "submittedAt": 1748635392000,
+      "title": "Surprisingly fast AI-generated kernels we didn't mean to publish yet",
+      "type": "story"
+    },
+    "44141314": {
+      "id": 44141314,
+      "submittedAt": 1748656060000,
+      "title": "Anthropic hits $3B in annualized revenue",
+      "type": "story"
+    },
+    "44148591": {
+      "id": 44148591,
+      "submittedAt": 1748750828000,
+      "title": "Fast Character Classification with Z3",
+      "type": "story"
+    },
+    "44148963": {
+      "id": 44148963,
+      "submittedAt": 1748758165000,
+      "title": "How to Grow an LSM-Tree? Towards Bridging the Gap Between Theory and Practice",
+      "type": "story"
+    },
+    "44153746": {
+      "id": 44153746,
+      "submittedAt": 1748811863000,
+      "title": "Apple Developer Event Will Show It's Still Far from Being an AI Leader",
+      "type": "story"
+    },
+    "44160427": {
+      "id": 44160427,
+      "submittedAt": 1748881437000,
+      "title": "xAI seeks $113B valuation in $300M share sale",
+      "type": "story"
+    },
+    "44162443": {
+      "id": 44162443,
+      "submittedAt": 1748894509000,
+      "title": "Snowflake to buy Crunchy Data for $250M",
+      "type": "story"
+    },
+    "44212413": {
+      "id": 44212413,
+      "submittedAt": 1749328058000,
+      "title": "Updates to Advanced Voice Mode for paid users",
+      "type": "story"
+    },
+    "44220123": {
+      "id": 44220123,
+      "submittedAt": 1749424966000,
+      "title": "Scaling Reinforcement Learning: Environments, Reward Hacking, Agents, Data",
+      "type": "story"
+    },
+    "44227565": {
+      "id": 44227565,
+      "submittedAt": 1749493655000,
+      "title": "OpenAI hits $10B in annual recurring revenue",
+      "type": "story"
+    },
+    "44229062": {
+      "id": 44229062,
+      "submittedAt": 1749500790000,
+      "title": "iOS 26 Gets New 'Adaptive Power' Option to Extend Battery Life",
+      "type": "story"
+    },
+    "44230290": {
+      "id": 44230290,
+      "submittedAt": 1749508370000,
+      "title": "Apple's big updates for Intel-based Macs will end with Tahoe",
+      "type": "story"
+    },
+    "44239275": {
+      "id": 44239275,
+      "submittedAt": 1749576682000,
+      "title": "Zuckerberg Is Personally Recruiting New 'Superintelligence' AI Team at Meta",
+      "type": "story"
+    },
+    "44239359": {
+      "id": 44239359,
+      "submittedAt": 1749577289000,
+      "title": "OpenAI dropped the price of o3 by 80%",
+      "type": "story"
+    },
+    "44240999": {
+      "id": 44240999,
+      "submittedAt": 1749586547000,
+      "title": "OpenAI o3-pro",
+      "type": "story"
+    },
+    "44243810": {
+      "id": 44243810,
+      "submittedAt": 1749611132000,
+      "title": "io_uring Shows Promising Potential for Linux Accelerator Drivers",
+      "type": "story"
+    },
+    "44248165": {
+      "id": 44248165,
+      "submittedAt": 1749653007000,
+      "title": "V-JEPA 2 world model and new benchmarks for physical reasoning",
+      "type": "story"
+    },
+    "44249190": {
+      "id": 44249190,
+      "submittedAt": 1749658909000,
+      "title": "Ultra Ethernet Specification v1.0 [pdf]",
+      "type": "story"
+    },
+    "44249749": {
+      "id": 44249749,
+      "submittedAt": 1749662429000,
+      "title": "Google names new chief AI architect to advance developments",
+      "type": "story"
+    },
+    "44250323": {
+      "id": 44250323,
+      "submittedAt": 1749665970000,
+      "title": "The New AI Networks – Ultra Ethernet UEC",
+      "type": "story"
+    },
+    "44253547": {
+      "id": 44253547,
+      "submittedAt": 1749692001000,
+      "title": "Java 25's new CPU-Time Profiler",
+      "type": "story"
+    },
+    "44262365": {
+      "id": 44262365,
+      "submittedAt": 1749757668000,
+      "title": "Engineer creates first custom motherboard for 1990s Playstation console",
+      "type": "story"
+    },
+    "44262559": {
+      "id": 44262559,
+      "submittedAt": 1749758757000,
+      "title": "Meta inks a new geothermal energy deal to support AI",
+      "type": "story"
+    },
+    "44271164": {
+      "id": 44271164,
+      "submittedAt": 1749840746000,
+      "title": "TvOS 26 Introduces Automatic Sign-In Feature for Apple TV Apps",
+      "type": "story"
+    },
+    "44271974": {
+      "id": 44271974,
+      "submittedAt": 1749846686000,
+      "title": "Anne Wojcicki Wins Bidding for 23andMe",
+      "type": "story"
+    },
+    "44272278": {
+      "id": 44272278,
+      "submittedAt": 1749848856000,
+      "title": "How we built our multi-agent research system",
+      "type": "story"
+    },
+    "44292797": {
+      "id": 44292797,
+      "submittedAt": 1750103227000,
+      "title": "Flexport Tariff Simulator",
+      "type": "story"
+    },
+    "44295796": {
+      "id": 44295796,
+      "submittedAt": 1750134825000,
+      "title": "Trying Out the AMD Developer Cloud for Quickly Evaluating Instinct and ROCm",
+      "type": "story"
+    },
+    "44302192": {
+      "id": 44302192,
+      "submittedAt": 1750184757000,
+      "title": "Meta to release smart glasses with Oakley and Prada",
+      "type": "story"
+    },
+    "44302216": {
+      "id": 44302216,
+      "submittedAt": 1750184843000,
+      "title": "Message from CEO Andy Jassy: Some Thoughts on Generative AI",
+      "type": "story"
+    },
+    "44303474": {
+      "id": 44303474,
+      "submittedAt": 1750191492000,
+      "title": "A look at the Vespa vs. Elasticsearch benchmark",
+      "type": "story"
+    },
+    "44314968": {
+      "id": 44314968,
+      "submittedAt": 1750300852000,
+      "title": "ChatGPT Record",
+      "type": "story"
+    },
+    "44323472": {
+      "id": 44323472,
+      "submittedAt": 1750375887000,
+      "title": "Meta tried to buy Ilya Sutskever's $32B AI startup, now planning to hire its CEO",
+      "type": "story"
+    },
+    "44325239": {
+      "id": 44325239,
+      "submittedAt": 1750401162000,
+      "title": "Understanding and Preventing Deadlocks in Concurrent Systems",
+      "type": "story"
+    },
+    "44332436": {
+      "id": 44332436,
+      "submittedAt": 1750456166000,
+      "title": "Apple Executives Have Held Internal Talks About Buying AI Startup Perplexity",
+      "type": "story"
+    },
+    "44333088": {
+      "id": 44333088,
+      "submittedAt": 1750462230000,
+      "title": "Meta CTO Bosworth says OpenAI countered lucrative job offers to employees",
+      "type": "story"
+    },
+    "44343084": {
+      "id": 44343084,
+      "submittedAt": 1750561499000,
+      "title": "Discover C++26's compile-time reflection",
+      "type": "story"
+    },
+    "44355721": {
+      "id": 44355721,
+      "submittedAt": 1750686021000,
+      "title": "Vultr Raises over $300M in Debt",
+      "type": "story"
+    },
+    "44358701": {
+      "id": 44358701,
+      "submittedAt": 1750703893000,
+      "title": "Leak reveals Grok might soon edit your spreadsheets",
+      "type": "story"
+    },
+    "44358759": {
+      "id": 44358759,
+      "submittedAt": 1750704277000,
+      "title": "FlexAttention: PyTorch Compiler Series [video]",
+      "type": "story"
+    },
+    "44358956": {
+      "id": 44358956,
+      "submittedAt": 1750705435000,
+      "title": "Run High-Performance LLM Inference Kernels from Nvidia Using FlashInfer",
+      "type": "story"
+    },
+    "44377231": {
+      "id": 44377231,
+      "submittedAt": 1750858781000,
+      "title": "HDMI 2.2 will support 16K video at 60Hz",
+      "type": "story"
+    },
+    "44384119": {
+      "id": 44384119,
+      "submittedAt": 1750911097000,
+      "title": "Meta Poaches Three OpenAI Researchers",
+      "type": "story"
+    },
+    "44390355": {
+      "id": 44390355,
+      "submittedAt": 1750964982000,
+      "title": "Meta in Talks to Buy AI Voice Startup PlayAI in Push for Talent",
+      "type": "story"
+    },
+    "44392146": {
+      "id": 44392146,
+      "submittedAt": 1750977275000,
+      "title": "I Joined Microsoft 40 Years Ago",
+      "type": "story"
+    },
+    "44397906": {
+      "id": 44397906,
+      "submittedAt": 1751040516000,
+      "title": "The race for LLM \"cognitive core\"",
+      "type": "story"
+    },
+    "44398978": {
+      "id": 44398978,
+      "submittedAt": 1751048050000,
+      "title": "H-1B Middlemen Bring Cheap Labor to Citi, Capital One",
+      "type": "story"
+    },
+    "44409622": {
+      "id": 44409622,
+      "submittedAt": 1751160357000,
+      "title": "Blackwell: Nvidia's GPU",
+      "type": "story"
+    },
+    "44414740": {
+      "id": 44414740,
+      "submittedAt": 1751217771000,
+      "title": "Steve Ballmer on Vista: \"we cannot do that again\" (2007)",
+      "type": "story"
+    },
+    "44416411": {
+      "id": 44416411,
+      "submittedAt": 1751231147000,
+      "title": "OpenAI Leadership Responds to Meta Offers: 'Someone Has Broken into Our Home'",
+      "type": "story"
+    },
+    "44424234": {
+      "id": 44424234,
+      "submittedAt": 1751295854000,
+      "title": "How Oracle Is Winning the AI Compute Market",
+      "type": "story"
+    },
+    "44424297": {
+      "id": 44424297,
+      "submittedAt": 1751296203000,
+      "title": "New MacBook with A18 Pro Chip Spotted in Apple Code",
+      "type": "story"
+    },
+    "44424308": {
+      "id": 44424308,
+      "submittedAt": 1751296252000,
+      "title": "Apple to Delay Some Feature Rollouts in EU, Citing Regulatory Hurdles",
+      "type": "story"
+    },
+    "44425888": {
+      "id": 44425888,
+      "submittedAt": 1751304809000,
+      "title": "Zuckerberg Announces Meta 'Superintelligence' Effort, More Hires",
+      "type": "story"
+    },
+    "44426643": {
+      "id": 44426643,
+      "submittedAt": 1751309800000,
+      "title": "Apple weighs using Anthropic or OpenAI to power Siri",
+      "type": "story"
+    },
+    "44436024": {
+      "id": 44436024,
+      "submittedAt": 1751389967000,
+      "title": "Wireless Account Lock",
+      "type": "story"
+    },
+    "44437297": {
+      "id": 44437297,
+      "submittedAt": 1751398570000,
+      "title": "Content Signals",
+      "type": "story"
+    },
+    "44437324": {
+      "id": 44437324,
+      "submittedAt": 1751398818000,
+      "title": "Figma S-1",
+      "type": "story"
+    },
+    "44443223": {
+      "id": 44443223,
+      "submittedAt": 1751461259000,
+      "title": "Microsoft to lay off as many as 9k employees in latest round",
+      "type": "story"
+    },
+    "44447023": {
+      "id": 44447023,
+      "submittedAt": 1751479976000,
+      "title": "Perplexity Max",
+      "type": "story"
+    },
+    "44449789": {
+      "id": 44449789,
+      "submittedAt": 1751497779000,
+      "title": "OpenAI says Robinhood's tokens aren't equity in the company",
+      "type": "story"
+    },
+    "44449970": {
+      "id": 44449970,
+      "submittedAt": 1751499223000,
+      "title": "The War on the Walkman",
+      "type": "story"
+    },
+    "44470464": {
+      "id": 44470464,
+      "submittedAt": 1751696092000,
+      "title": "The messy reality of SIMD (vector) functions",
+      "type": "story"
+    },
+    "44481627": {
+      "id": 44481627,
+      "submittedAt": 1751816044000,
+      "title": "Understand CPU Branch Instructions Better",
+      "type": "story"
+    },
+    "44483083": {
+      "id": 44483083,
+      "submittedAt": 1751828003000,
+      "title": "TikTok's 'ban' problem could end soon with a new app and a sale",
+      "type": "story"
+    },
+    "44493384": {
+      "id": 44493384,
+      "submittedAt": 1751913594000,
+      "title": "The Need for Transparency in Frontier AI",
+      "type": "story"
+    },
+    "44493726": {
+      "id": 44493726,
+      "submittedAt": 1751915876000,
+      "title": "Waymo starts robotaxi testing in Philadelphia and NYC",
+      "type": "story"
+    },
+    "44494553": {
+      "id": 44494553,
+      "submittedAt": 1751921436000,
+      "title": "Dobin v. Tesla – A lawyer's journey through arbitration to get a refund for FSD",
+      "type": "story"
+    },
+    "44494893": {
+      "id": 44494893,
+      "submittedAt": 1751924056000,
+      "title": "Microsoft Edge sets a new standard for speed and responsiveness",
+      "type": "story"
+    },
+    "44495060": {
+      "id": 44495060,
+      "submittedAt": 1751925305000,
+      "title": "Apple Loses Its Top AI Models Executive to Meta's Hiring Spree",
+      "type": "story"
+    },
+    "44496642": {
+      "id": 44496642,
+      "submittedAt": 1751944564000,
+      "title": "Understanding Rust's Memory Model",
+      "type": "story"
+    },
+    "44496974": {
+      "id": 44496974,
+      "submittedAt": 1751947509000,
+      "title": "Shein files for Hong Kong IPO to pressure UK to save London listing",
+      "type": "story"
+    },
+    "44503606": {
+      "id": 44503606,
+      "submittedAt": 1752005392000,
+      "title": "Meta Invests $3.5B in Largest Eye-Wear Maker in AI Glasses Push",
+      "type": "story"
+    },
+    "44503827": {
+      "id": 44503827,
+      "submittedAt": 1752006926000,
+      "title": "Apple COO Jeff Williams is stepping down from role",
+      "type": "story"
+    },
+    "44504053": {
+      "id": 44504053,
+      "submittedAt": 1752008556000,
+      "title": "Apple Operating Chief Jeff Williams to Pass Role to Deputy",
+      "type": "story"
+    },
+    "44504077": {
+      "id": 44504077,
+      "submittedAt": 1752008751000,
+      "title": "Apple announces chief operating officer transition",
+      "type": "story"
+    },
+    "44504576": {
+      "id": 44504576,
+      "submittedAt": 1752013412000,
+      "title": "Why Do Some Language Models Fake Alignment While Others Don't?",
+      "type": "story"
+    },
+    "44506624": {
+      "id": 44506624,
+      "submittedAt": 1752039287000,
+      "title": "Lump of labour fallacy",
+      "type": "story"
+    },
+    "44509988": {
+      "id": 44509988,
+      "submittedAt": 1752068754000,
+      "title": "Nvidia Becomes First Company to Reach $4T Market Cap",
+      "type": "story"
+    },
+    "44512531": {
+      "id": 44512531,
+      "submittedAt": 1752081190000,
+      "title": "OpenAI Closes $6.5B Deal to Buy Jony Ive's Device Startup",
+      "type": "story"
+    },
+    "44512565": {
+      "id": 44512565,
+      "submittedAt": 1752081373000,
+      "title": "Apple Readies First Upgrade to Its Struggling Vision Pro Headset",
+      "type": "story"
+    },
+    "44514205": {
+      "id": 44514205,
+      "submittedAt": 1752091255000,
+      "title": "We're Leaving Delaware, and We Think You Should Consider Leaving Too",
+      "type": "story"
+    },
+    "44515349": {
+      "id": 44515349,
+      "submittedAt": 1752100107000,
+      "title": "Cloudflare wants Google to change its AI search crawling. Google likely won't",
+      "type": "story"
+    },
+    "44515469": {
+      "id": 44515469,
+      "submittedAt": 1752101043000,
+      "title": "Meta Poached Apple's Pang with Pay Package over $200M",
+      "type": "story"
+    },
+    "44516358": {
+      "id": 44516358,
+      "submittedAt": 1752110983000,
+      "title": "TikTok prepares US app with its own algorithm and user data",
+      "type": "story"
+    },
+    "44526179": {
+      "id": 44526179,
+      "submittedAt": 1752185138000,
+      "title": "Apple Plans New MacBook Pro, iPhone 17e and iPads by Early 2026",
+      "type": "story"
+    },
+    "44536113": {
+      "id": 44536113,
+      "submittedAt": 1752262744000,
+      "title": "xAI seeks up to $200B valuation in next fundraising",
+      "type": "story"
+    },
+    "44543103": {
+      "id": 44543103,
+      "submittedAt": 1752337520000,
+      "title": "Trump Tax Law Takes Aim at Popular Perk: Office Snacks",
+      "type": "story"
+    },
+    "44544136": {
+      "id": 44544136,
+      "submittedAt": 1752346288000,
+      "title": "Mark Zuckerberg on rebranding Facebook (2018)",
+      "type": "story"
+    },
+    "44550882": {
+      "id": 44550882,
+      "submittedAt": 1752418696000,
+      "title": "Tim Cook Isn't Going Anywhere Soon, but an Apple Shake-Up Looms",
+      "type": "story"
+    },
+    "44560915": {
+      "id": 44560915,
+      "submittedAt": 1752504484000,
+      "title": "CoreWeave Data Center to Double City's Power Needs as AI Strains US Supply",
+      "type": "story"
+    },
+    "44561075": {
+      "id": 44561075,
+      "submittedAt": 1752505436000,
+      "title": "Apple Faces Calls to Reboot AI Strategy with Shares Slumping",
+      "type": "story"
+    },
+    "44562424": {
+      "id": 44562424,
+      "submittedAt": 1752512252000,
+      "title": "Zuckerberg says first AI data supercluster will come online in 2026",
+      "type": "story"
+    },
+    "44563797": {
+      "id": 44563797,
+      "submittedAt": 1752518669000,
+      "title": "Updated default robots.txt on Shopify storefronts",
+      "type": "story"
+    },
+    "44567440": {
+      "id": 44567440,
+      "submittedAt": 1752547953000,
+      "title": "Nvidia to resume H20 sales to China, announces new compliant GPU for China",
+      "type": "story"
+    },
+    "44573166": {
+      "id": 44573166,
+      "submittedAt": 1752598049000,
+      "title": "Polymarket Probe Ended by DOJ",
+      "type": "story"
+    },
+    "44575442": {
+      "id": 44575442,
+      "submittedAt": 1752610977000,
+      "title": "Apple inks $500M rare earth magnet deal to bring supply home",
+      "type": "story"
+    },
+    "44576847": {
+      "id": 44576847,
+      "submittedAt": 1752620713000,
+      "title": "Behind the Streams: Three Years of Live at Netflix",
+      "type": "story"
+    },
+    "44578542": {
+      "id": 44578542,
+      "submittedAt": 1752638275000,
+      "title": "Another High-Profile OpenAI Researcher Departs for Meta",
+      "type": "story"
+    },
+    "44579442": {
+      "id": 44579442,
+      "submittedAt": 1752648737000,
+      "title": "Mixture-of-Recursions",
+      "type": "story"
+    },
+    "44582855": {
+      "id": 44582855,
+      "submittedAt": 1752676795000,
+      "title": "Chain of thought monitorability: A new and fragile opportunity for AI safety",
+      "type": "story"
+    },
+    "44583290": {
+      "id": 44583290,
+      "submittedAt": 1752679391000,
+      "title": "Transitioning to Virtual Threads Using the Micronaut Loom Carrier",
+      "type": "story"
+    },
+    "44585832": {
+      "id": 44585832,
+      "submittedAt": 1752693321000,
+      "title": "Reactive Java Operator-fusion (2016)",
+      "type": "story"
+    },
+    "44586180": {
+      "id": 44586180,
+      "submittedAt": 1752695866000,
+      "title": "OpenAI says it will use Google's cloud for ChatGPT",
+      "type": "story"
+    },
+    "44588117": {
+      "id": 44588117,
+      "submittedAt": 1752709688000,
+      "title": "Anthropic Draws Investor Interest at More Than $100B Valuation",
+      "type": "story"
+    },
+    "44598254": {
+      "id": 44598254,
+      "submittedAt": 1752786591000,
+      "title": "Anthropic tightens usage limits for Claude Code without telling users",
+      "type": "story"
+    },
+    "44599643": {
+      "id": 44599643,
+      "submittedAt": 1752796273000,
+      "title": "Meta Hires Two Key Apple AI Experts After Poaching Their Boss",
+      "type": "story"
+    },
+    "44637321": {
+      "id": 44637321,
+      "submittedAt": 1753116352000,
+      "title": "Polymarket Set for US Return After Deal to Buy Tiny Exchange",
+      "type": "story"
+    },
+    "44639846": {
+      "id": 44639846,
+      "submittedAt": 1753128344000,
+      "title": "Netflix Using Startup Runway AI's Video Tools for Production",
+      "type": "story"
+    },
+    "44639867": {
+      "id": 44639867,
+      "submittedAt": 1753128448000,
+      "title": "OpenAI to open first DC office to push policy goals and show off products",
+      "type": "story"
+    },
+    "44640779": {
+      "id": 44640779,
+      "submittedAt": 1753134353000,
+      "title": "SoftBank and OpenAI's $500B AI Project Struggles to Get Off Ground",
+      "type": "story"
+    },
+    "44663074": {
+      "id": 44663074,
+      "submittedAt": 1753299296000,
+      "title": "AMD CEO sees chips from TSMC's US plant costing 5%-20% more",
+      "type": "story"
+    },
+    "44673677": {
+      "id": 44673677,
+      "submittedAt": 1753378886000,
+      "title": "Meta is using tents to build its giant AI data centers",
+      "type": "story"
+    },
+    "44684172": {
+      "id": 44684172,
+      "submittedAt": 1753456961000,
+      "title": "Final Benchmarks of Clear Linux on Intel: ~48% Faster Than Ubuntu Out-of-the-Box",
+      "type": "story"
+    },
+    "44707100": {
+      "id": 44707100,
+      "submittedAt": 1753675077000,
+      "title": "Tesla has signed a $16.5B chip contract with Samsung",
+      "type": "story"
+    },
+    "44719350": {
+      "id": 44719350,
+      "submittedAt": 1753766655000,
+      "title": "Nvidia orders 300k H20 chips from TSMC due to robust China demand",
+      "type": "story"
+    },
+    "44726032": {
+      "id": 44726032,
+      "submittedAt": 1753809852000,
+      "title": "Apple Loses Fourth AI Researcher in a Month to Meta's Superintelligence Team",
+      "type": "story"
+    },
+    "44728435": {
+      "id": 44728435,
+      "submittedAt": 1753824387000,
+      "title": "Microsoft Nears OpenAI Agreement for Ongoing Tech Access",
+      "type": "story"
+    },
+    "44729032": {
+      "id": 44729032,
+      "submittedAt": 1753828420000,
+      "title": "Google execs say employees have to 'be more AI-savvy'",
+      "type": "story"
+    },
+    "44729591": {
+      "id": 44729591,
+      "submittedAt": 1753833365000,
+      "title": "YouTube to Be Included in Australia's Teen Social Media Ban",
+      "type": "story"
+    },
+    "44737808": {
+      "id": 44737808,
+      "submittedAt": 1753899932000,
+      "title": "Groq Nears $600M Funding Deal",
+      "type": "story"
+    },
+    "44738957": {
+      "id": 44738957,
+      "submittedAt": 1753906266000,
+      "title": "Meta Reports Second Quarter 2025 Results",
+      "type": "story"
+    },
+    "44738965": {
+      "id": 44738965,
+      "submittedAt": 1753906309000,
+      "title": "Microsoft Earnings Release FY25 Q4",
+      "type": "story"
+    },
+    "44740489": {
+      "id": 44740489,
+      "submittedAt": 1753916066000,
+      "title": "Java Custom Virtual Thread Schedulers",
+      "type": "story"
+    },
+    "44748441": {
+      "id": 44748441,
+      "submittedAt": 1753985703000,
+      "title": "Figma more than triples in NYSE debut after selling shares at $33",
+      "type": "story"
+    },
+    "44749795": {
+      "id": 44749795,
+      "submittedAt": 1753993921000,
+      "title": "Apple reports third quarter results",
+      "type": "story"
+    },
+    "44752296": {
+      "id": 44752296,
+      "submittedAt": 1754013601000,
+      "title": "Wide Research",
+      "type": "story"
+    },
+    "44757247": {
+      "id": 44757247,
+      "submittedAt": 1754058159000,
+      "title": "OpenAI raises $8.3B at $300B valuation",
+      "type": "story"
+    },
+    "44760619": {
+      "id": 44760619,
+      "submittedAt": 1754073138000,
+      "title": "Tesla Must Pay $329M in Damages for Fatal Autopilot Crash",
+      "type": "story"
+    },
+    "44770960": {
+      "id": 44770960,
+      "submittedAt": 1754165479000,
+      "title": "Demystify OpenAI Triton (2023)",
+      "type": "story"
+    },
+    "44787345": {
+      "id": 44787345,
+      "submittedAt": 1754321996000,
+      "title": "ChatGPT is on track to reach 700M weekly active users this week",
+      "type": "story"
+    },
+    "44806280": {
+      "id": 44806280,
+      "submittedAt": 1754440328000,
+      "title": "Disney's ESPN to acquire NFL media assets in major deal",
+      "type": "story"
+    },
+    "44806839": {
+      "id": 44806839,
+      "submittedAt": 1754445841000,
+      "title": "OpenAI in Talks for Share Sale Valuing Startup at $500B",
+      "type": "story"
+    },
+    "44820698": {
+      "id": 44820698,
+      "submittedAt": 1754542306000,
+      "title": "Apple hit by string of departures in AI talent war",
+      "type": "story"
+    },
+    "44824124": {
+      "id": 44824124,
+      "submittedAt": 1754572790000,
+      "title": "PyTorch 2.8 Release",
+      "type": "story"
+    },
+    "44830600": {
+      "id": 44830600,
+      "submittedAt": 1754602098000,
+      "title": "Tesla Disbands Dojo Supercomputer Team",
+      "type": "story"
+    },
+    "44858340": {
+      "id": 44858340,
+      "submittedAt": 1754860395000,
+      "title": "Nvidia and AMD to pay 15% of China chip sale revenues to US Government",
+      "type": "story"
+    },
+    "44880554": {
+      "id": 44880554,
+      "submittedAt": 1755025684000,
+      "title": "Apple Plans New MacBook Pro, iPhone 17e and iPads by Early 2026",
+      "type": "story"
+    },
+    "44917781": {
+      "id": 44917781,
+      "submittedAt": 1755295453000,
+      "title": "Predictable memory accesses are much faster",
+      "type": "story"
+    },
+    "44947954": {
+      "id": 44947954,
+      "submittedAt": 1755573788000,
+      "title": "UK Drops Mandate for Apple 'Backdoor' on Americans",
+      "type": "story"
+    },
+    "44951796": {
+      "id": 44951796,
+      "submittedAt": 1755612875000,
+      "title": "Apple Expands iPhone Production in India for US-Bound New Models",
+      "type": "story"
+    },
+    "44957733": {
+      "id": 44957733,
+      "submittedAt": 1755651874000,
+      "title": "Concurrency Control as a Service [pdf]",
+      "type": "story"
+    },
+    "44979325": {
+      "id": 44979325,
+      "submittedAt": 1755818279000,
+      "title": "Meta Signs $10B Cloud Deal with Google",
+      "type": "story"
+    },
+    "44980161": {
+      "id": 44980161,
+      "submittedAt": 1755826115000,
+      "title": "Meta Poaches Apple AI Executive Even as It Plans Hiring Slowdown",
+      "type": "story"
+    },
+    "44980602": {
+      "id": 44980602,
+      "submittedAt": 1755831491000,
+      "title": "Nvidia Orders Halt to H20 Production After China Directive Against Purchases",
+      "type": "story"
+    },
+    "45010169": {
+      "id": 45010169,
+      "submittedAt": 1756095661000,
+      "title": "Time-Series Clustering: A Comprehensive Study of Data Mining, ML, and DL Methods [pdf]",
+      "type": "story"
+    },
+    "45016372": {
+      "id": 45016372,
+      "submittedAt": 1756142981000,
+      "title": "Rethinking SIMD Vectorization for In-Memory Databases (2015) [pdf]",
+      "type": "story"
+    },
+    "45052111": {
+      "id": 45052111,
+      "submittedAt": 1756388677000,
+      "title": "Compilation vs. vectorization, search engine edition",
+      "type": "story"
+    },
+    "45055250": {
+      "id": 45055250,
+      "submittedAt": 1756405020000,
+      "title": "Grok Code Fast 1",
+      "type": "story"
+    },
+    "45075603": {
+      "id": 45075603,
+      "submittedAt": 1756568741000,
+      "title": "Steve Jobs's letter on iPhone apps: draft vs. final (2007)",
+      "type": "story"
+    },
+    "45080969": {
+      "id": 45080969,
+      "submittedAt": 1756623309000,
+      "title": "ML-Asset Management: Curation, Discovery, and Utilization [pdf]",
+      "type": "story"
+    },
+    "45094224": {
+      "id": 45094224,
+      "submittedAt": 1756744662000,
+      "title": "Beyond Quacking: Deep Integration of Language Models and RAG into DuckDB [pdf]",
+      "type": "story"
+    },
+    "45107664": {
+      "id": 45107664,
+      "submittedAt": 1756840248000,
+      "title": "Apple's Lead AI Researcher for Robotics Heads to Meta as Part of Latest Exits",
+      "type": "story"
+    },
+    "45120378": {
+      "id": 45120378,
+      "submittedAt": 1756933257000,
+      "title": "France's data protection authority fines Google 325M euros",
+      "type": "story"
+    },
+    "45120447": {
+      "id": 45120447,
+      "submittedAt": 1756933900000,
+      "title": "Amazon's AI Resurgence: AWS and Anthropic's Multi-Gigawatt Trainium Expansion",
+      "type": "story"
+    },
+    "45120489": {
+      "id": 45120489,
+      "submittedAt": 1756934163000,
+      "title": "Mistral Set for $14B Valuation with New Funding Round",
+      "type": "story"
+    },
+    "45131861": {
+      "id": 45131861,
+      "submittedAt": 1757017596000,
+      "title": "You can now branch conversations in ChatGPT",
+      "type": "story"
+    },
+    "45161677": {
+      "id": 45161677,
+      "submittedAt": 1757275646000,
+      "title": "Splitting a long string in lines efficiently",
+      "type": "story"
+    },
+    "45163713": {
+      "id": 45163713,
+      "submittedAt": 1757292609000,
+      "title": "Disaggregated State Management in Apache Flink 2.0 [pdf]",
+      "type": "story"
+    },
+    "45164579": {
+      "id": 45164579,
+      "submittedAt": 1757304942000,
+      "title": "Scribe: How Meta transports terabytes per second in real time [pdf]",
+      "type": "story"
+    },
+    "45184535": {
+      "id": 45184535,
+      "submittedAt": 1757435843000,
+      "title": "Investigating IntelliJ Platform UI Freezes",
+      "type": "story"
+    },
+    "45192224": {
+      "id": 45192224,
+      "submittedAt": 1757470026000,
+      "title": "Full MCP tools support in ChatGPT",
+      "type": "story"
+    },
+    "45217100": {
+      "id": 45217100,
+      "submittedAt": 1757632642000,
+      "title": "OpenAI Restructuring to Give Nonprofit $100B Stake",
+      "type": "story"
+    },
+    "45266189": {
+      "id": 45266189,
+      "submittedAt": 1758048346000,
+      "title": "Details Emerge on U.S.-China TikTok Deal",
+      "type": "story"
+    },
+    "45342207": {
+      "id": 45342207,
+      "submittedAt": 1758594850000,
+      "title": "Wisely Optimizing Short Video Streaming for a User-Vendor Win-Win Outcome",
+      "type": "story"
+    },
+    "45348918": {
+      "id": 45348918,
+      "submittedAt": 1758643403000,
+      "title": "US Plans H-1B Lottery Overhaul to Prioritize Higher Earners",
+      "type": "story"
+    },
+    "45348964": {
+      "excerpt": "DHS Propos",
+      "id": 45348964,
+      "submittedAt": 1758643638000,
+      "type": "comment"
+    },
+    "45365730": {
+      "id": 45365730,
+      "submittedAt": 1758746629000,
+      "title": "Intel Is Seeking an Investment from Apple as Part of Its Comeback Bid",
+      "type": "story"
+    },
+    "45366370": {
+      "id": 45366370,
+      "submittedAt": 1758750571000,
+      "title": "CWM: An Open-Weights LLM for Research on Code Generation with World Models",
+      "type": "story"
+    },
+    "45379429": {
+      "id": 45379429,
+      "submittedAt": 1758836079000,
+      "title": "Meta in Talks with Google to Use Gemini to Improve Ad Targeting",
+      "type": "story"
+    },
+    "45379504": {
+      "id": 45379504,
+      "submittedAt": 1758836509000,
+      "title": "US judge approves $1.5B Anthropic copyright settlement with authors",
+      "type": "story"
+    },
+    "45388649": {
+      "id": 45388649,
+      "submittedAt": 1758905941000,
+      "title": "ByteDance to Get About 50% of TikTok US Profit Under Trump Deal",
+      "type": "story"
+    },
+    "45389253": {
+      "id": 45389253,
+      "submittedAt": 1758909619000,
+      "title": "Apple Builds a ChatGPT-Like App to Help Test the Revamped Siri",
+      "type": "story"
+    },
+    "45399051": {
+      "id": 45399051,
+      "submittedAt": 1759004695000,
+      "title": "Xiaomi bought 3 Tesla Model Y and ripped them apart to see what they could learn",
+      "type": "story"
+    },
+    "45401585": {
+      "id": 45401585,
+      "submittedAt": 1759031081000,
+      "title": "JEP 526: Lazy Constants",
+      "type": "story"
+    },
+    "45428877": {
+      "id": 45428877,
+      "submittedAt": 1759255233000,
+      "title": "OpenAI's New Sora Video Generator to Require Copyright Holders to Opt Out",
+      "type": "story"
+    },
+    "45494878": {
+      "id": 45494878,
+      "submittedAt": 1759776793000,
+      "title": "Sam Altman says ChatGPT has hit 800M weekly active users",
+      "type": "story"
+    },
+    "45507936": {
+      "id": 45507936,
+      "submittedAt": 1759866551000,
+      "title": "Gemini 2.5 Computer Use model",
+      "type": "story"
+    },
+    "45510281": {
+      "id": 45510281,
+      "submittedAt": 1759879927000,
+      "title": "xAI Nears $20B Capital Raise Tied to Nvidia Chips",
+      "type": "story"
+    },
+    "45528177": {
+      "id": 45528177,
+      "submittedAt": 1760020009000,
+      "title": "Column-Stores vs. Row-Stores: How Different Are They Really? (2008) [pdf]",
+      "type": "story"
+    },
+    "45550029": {
+      "id": 45550029,
+      "submittedAt": 1760197459000,
+      "title": "Innovative Recommendation Applications Using Two Tower Embeddings at Uber",
+      "type": "story"
+    },
+    "45583192": {
+      "id": 45583192,
+      "submittedAt": 1760466425000,
+      "title": "JEP Draft: Strict Field Initialization in the JVM",
+      "type": "story"
+    },
+    "45587835": {
+      "id": 45587835,
+      "submittedAt": 1760499479000,
+      "title": "Amazon Plans to Cut as Much as 15% of Its HR Staff",
+      "type": "story"
+    },
+    "45599394": {
+      "id": 45599394,
+      "submittedAt": 1760569475000,
+      "title": "Apple's Newly Tapped Head of ChatGPT-Like AI Search Effort to Leave for Meta",
+      "type": "story"
+    },
+    "45605633": {
+      "id": 45605633,
+      "submittedAt": 1760624141000,
+      "title": "OpenAI hires black hole physicist in broader science push",
+      "type": "story"
+    },
+    "45617243": {
+      "id": 45617243,
+      "submittedAt": 1760711543000,
+      "title": "Apple becomes broadcast partner for Formula 1 in the United States",
+      "type": "story"
+    },
+    "45618278": {
+      "id": 45618278,
+      "submittedAt": 1760716972000,
+      "title": "Apple Said to Cut iPhone Air Production Amid Underwhelming Sales",
+      "type": "story"
+    },
+    "45623146": {
+      "id": 45623146,
+      "submittedAt": 1760742081000,
+      "title": "Energy Department Announces Roadmap to Accelerate Commercial Fusion Power",
+      "type": "story"
+    },
+    "45623935": {
+      "id": 45623935,
+      "submittedAt": 1760749535000,
+      "title": "A Handyman's Wife Helped an Hermès Heir Discover He'd Lost $15B",
+      "type": "story"
+    },
+    "45658359": {
+      "id": 45658359,
+      "submittedAt": 1761066597000,
+      "title": "Launching our new browser, ChatGPT Atlas",
+      "type": "story"
+    },
+    "45686790": {
+      "id": 45686790,
+      "submittedAt": 1761251981000,
+      "title": "Expanding Our Use of Google Cloud TPUs and Services",
+      "type": "story"
+    },
+    "45715140": {
+      "id": 45715140,
+      "submittedAt": 1761512142000,
+      "title": "Flame Graphs in Go",
+      "type": "story"
+    },
+    "45722864": {
+      "id": 45722864,
+      "submittedAt": 1761582319000,
+      "title": "Advancing Claude for Financial Services",
+      "type": "story"
+    },
+    "45722882": {
+      "id": 45722882,
+      "submittedAt": 1761582408000,
+      "title": "Collective Communication for 100k+ GPUs",
+      "type": "story"
+    },
+    "45727240": {
+      "id": 45727240,
+      "submittedAt": 1761605297000,
+      "title": "Is AI creating new revenue streams–or just taking share?",
+      "type": "story"
+    },
+    "45752570": {
+      "id": 45752570,
+      "submittedAt": 1761769512000,
+      "title": "Meta Reports Third Quarter 2025 Results",
+      "type": "story"
+    },
+    "45761360": {
+      "id": 45761360,
+      "submittedAt": 1761839295000,
+      "title": "Video Encoding 101: A Comprehensive Guide",
+      "type": "story"
+    },
+    "45764314": {
+      "id": 45764314,
+      "submittedAt": 1761852833000,
+      "title": "Nvidia to Invest Up to $1B in AI Startup Poolside",
+      "type": "story"
+    },
+    "45764851": {
+      "id": 45764851,
+      "submittedAt": 1761855610000,
+      "title": "Amazon.com Announces Q3 2025 Results",
+      "type": "story"
+    },
+    "45764986": {
+      "id": 45764986,
+      "submittedAt": 1761856442000,
+      "title": "Apple reports fourth quarter results",
+      "type": "story"
+    },
+    "45788220": {
+      "id": 45788220,
+      "submittedAt": 1762064955000,
+      "title": "Open Catalyst Project",
+      "type": "story"
+    },
+    "45794905": {
+      "id": 45794905,
+      "submittedAt": 1762131832000,
+      "title": "My First Multi-GPU Kernel: Writing All-to-All for AMD MI300X",
+      "type": "story"
+    },
+    "45813248": {
+      "id": 45813248,
+      "submittedAt": 1762275805000,
+      "title": "Apple Readies a Low-Cost Laptop to Rival Chromebooks and Windows PCs",
+      "type": "story"
+    },
+    "45813626": {
+      "id": 45813626,
+      "submittedAt": 1762277654000,
+      "title": "Towards a future space-based, highly scalable AI infrastructure system design [pdf]",
+      "type": "story"
+    },
+    "45815514": {
+      "id": 45815514,
+      "submittedAt": 1762287994000,
+      "title": "Support for UUID Version 7 (UUIDv7) added to Java 26",
+      "type": "story"
+    },
+    "45815661": {
+      "id": 45815661,
+      "submittedAt": 1762288931000,
+      "title": "IBM cutting thousands of jobs in the fourth quarter",
+      "type": "story"
+    },
+    "45816495": {
+      "id": 45816495,
+      "submittedAt": 1762294691000,
+      "title": "HDR10 Advanced joins Dolby Vision 2 in trying to make you like motion smoothing",
+      "type": "story"
+    },
+    "45819770": {
+      "id": 45819770,
+      "submittedAt": 1762322745000,
+      "title": "IndQA",
+      "type": "story"
+    },
+    "45819961": {
+      "id": 45819961,
+      "submittedAt": 1762324512000,
+      "title": "Stanford CME295 – LLM Training [video]",
+      "type": "story"
+    },
+    "45820476": {
+      "id": 45820476,
+      "submittedAt": 1762329059000,
+      "title": "China offers tech giants cheap power to boost domestic AI chips",
+      "type": "story"
+    },
+    "45826664": {
+      "id": 45826664,
+      "submittedAt": 1762370041000,
+      "title": "Apple Plans to Use 1.2T Parameter Google Gemini Model to Run New Siri",
+      "type": "story"
+    },
+    "45832314": {
+      "id": 45832314,
+      "submittedAt": 1762412629000,
+      "title": "JEP draft: Deprecate UTF-16-only String Representation",
+      "type": "story"
+    },
+    "45832785": {
+      "id": 45832785,
+      "submittedAt": 1762417094000,
+      "title": "Google planning powerful AI data centre on tiny Australian Indian Ocean outpost",
+      "type": "story"
+    },
+    "45840022": {
+      "id": 45840022,
+      "submittedAt": 1762461053000,
+      "title": "Google Finance adds prediction markets and AI features for research, earnings",
+      "type": "story"
+    },
+    "45860205": {
+      "id": 45860205,
+      "submittedAt": 1762637397000,
+      "title": "Understanding the CUDA Compiler and PTX with a Top-K Kernel",
+      "type": "story"
+    },
+    "45867818": {
+      "id": 45867818,
+      "submittedAt": 1762712932000,
+      "title": "Apple Plans Major New Satellite-Powered Features for iPhones",
+      "type": "story"
+    },
+    "45869966": {
+      "id": 45869966,
+      "submittedAt": 1762728205000,
+      "title": "Automated Equality Checks in C++ with Reflection (C++26)",
+      "type": "story"
+    },
+    "45870032": {
+      "id": 45870032,
+      "submittedAt": 1762728700000,
+      "title": "An AI-Generated Country Song Is Topping a Billboard Chart",
+      "type": "story"
+    },
+    "45884219": {
+      "id": 45884219,
+      "submittedAt": 1762836578000,
+      "title": "Anthropic Is on Track to Turn a Profit Much Faster Than OpenAI",
+      "type": "story"
+    },
+    "45884937": {
+      "id": 45884937,
+      "submittedAt": 1762846326000,
+      "title": "SoftBank sells its entire stake in Nvidia",
+      "type": "story"
+    },
+    "45901524": {
+      "id": 45901524,
+      "submittedAt": 1762962077000,
+      "title": "Coinbase moves incorporation to Texas from Delaware",
+      "type": "story"
+    },
+    "45904522": {
+      "id": 45904522,
+      "submittedAt": 1762974233000,
+      "title": "X goes down with a security 'Yubikey' error affecting Twitter users",
+      "type": "story"
+    },
+    "45932558": {
+      "id": 45932558,
+      "submittedAt": 1763156777000,
+      "title": "Warren Buffett's Berkshire Hathaway reveals new position in Alphabet",
+      "type": "story"
+    },
+    "45935185": {
+      "id": 45935185,
+      "submittedAt": 1763183163000,
+      "title": "Towards unlimited contexts: faster-than-GPU sparse logarithmic attention on CPU [video]",
+      "type": "story"
+    },
+    "45942838": {
+      "excerpt": "Bloomberg&",
+      "id": 45942838,
+      "submittedAt": 1763268490000,
+      "type": "comment"
+    },
+    "46042003": {
+      "id": 46042003,
+      "submittedAt": 1764040804000,
+      "title": "Meta and Google Discuss Deploying TPUs in Meta Datacenters Starting 2027",
+      "type": "story"
+    },
+    "46085753": {
+      "id": 46085753,
+      "submittedAt": 1764401430000,
+      "title": "How fast can browsers process base64 data?",
+      "type": "story"
+    },
+    "46113092": {
+      "id": 46113092,
+      "submittedAt": 1764622556000,
+      "title": "Instagram chief orders staff back to the office five days a week in 2026",
+      "type": "story"
+    },
+    "46125048": {
+      "id": 46125048,
+      "submittedAt": 1764701858000,
+      "title": "EA's Next Act and It's Vision for Sports and Sports Fandom",
+      "type": "story"
+    },
+    "46125534": {
+      "id": 46125534,
+      "submittedAt": 1764703729000,
+      "title": "How AI is transforming work at Anthropic",
+      "type": "story"
+    },
+    "46156645": {
+      "id": 46156645,
+      "submittedAt": 1764906252000,
+      "title": "Warner Bros Begins Exclusive Deal Talks With Netflix",
+      "type": "story"
+    },
+    "46156681": {
+      "id": 46156681,
+      "submittedAt": 1764906646000,
+      "title": "Vpternlog: Signed Saturation",
+      "type": "story"
+    },
+    "46171585": {
+      "id": 46171585,
+      "submittedAt": 1765009055000,
+      "title": "High-Performance DBMSs with io_uring: When and How to use it",
+      "type": "story"
+    },
+    "46188457": {
+      "id": 46188457,
+      "submittedAt": 1765169173000,
+      "title": "IBM Nears Roughly $11B Deal for Confluent",
+      "type": "story"
+    },
+    "46200685": {
+      "id": 46200685,
+      "submittedAt": 1765248406000,
+      "title": "The State of Enterprise AI",
+      "type": "story"
+    },
+    "46202789": {
+      "id": 46202789,
+      "submittedAt": 1765270609000,
+      "title": "Google hit with EU antitrust investigation over use of online content for AI",
+      "type": "story"
+    },
+    "46210694": {
+      "id": 46210694,
+      "submittedAt": 1765314617000,
+      "title": "SpaceX to Pursue 2026 IPO Raising Far Above $30B",
+      "type": "story"
+    },
+    "46212925": {
+      "id": 46212925,
+      "submittedAt": 1765329499000,
+      "title": "ASM Visualizer",
+      "type": "story"
+    },
+    "46239009": {
+      "id": 46239009,
+      "submittedAt": 1765496909000,
+      "title": "Trump signs executive order for single national AI regulation framework",
+      "type": "story"
+    },
+    "46246467": {
+      "id": 46246467,
+      "submittedAt": 1765561113000,
+      "title": "Data breach at credit check giant 700Credit affects at least 5.6M",
+      "type": "story"
+    },
+    "46258260": {
+      "id": 46258260,
+      "submittedAt": 1765661357000,
+      "title": "Stronger Normalization-Free Transformers",
+      "type": "story"
+    },
+    "46283099": {
+      "id": 46283099,
+      "submittedAt": 1765845056000,
+      "title": "OpenAI Deal to License Disney Characters Is Entirely in Stock",
+      "type": "story"
+    },
+    "46291328": {
+      "id": 46291328,
+      "submittedAt": 1765905948000,
+      "title": "Improved Gemini audio models for powerful voice interactions",
+      "type": "story"
+    },
+    "46292990": {
+      "id": 46292990,
+      "submittedAt": 1765912515000,
+      "title": "The future of intelligence – Demis Hassabis [video]",
+      "type": "story"
+    },
+    "46294967": {
+      "id": 46294967,
+      "submittedAt": 1765921455000,
+      "title": "Warner Bros to rebuff $108B Paramount hostile offer",
+      "type": "story"
+    },
+    "46316238": {
+      "id": 46316238,
+      "submittedAt": 1766081032000,
+      "title": "How I Made My Own Apple Watch – In China [video]",
+      "type": "story"
+    },
+    "46319567": {
+      "id": 46319567,
+      "submittedAt": 1766096135000,
+      "title": "OpenAI's New Fundraising Round Could Value Startup at as Much as $830B",
+      "type": "story"
+    },
+    "46319940": {
+      "id": 46319940,
+      "submittedAt": 1766098292000,
+      "title": "TikTok signs agreement to create new U.S. joint venture",
+      "type": "story"
+    },
+    "46322392": {
+      "id": 46322392,
+      "submittedAt": 1766120181000,
+      "title": "Google works with Meta on TorchTPU to enhance TPU compatibility with PyTorch",
+      "type": "story"
+    },
+    "46322631": {
+      "id": 46322631,
+      "submittedAt": 1766123373000,
+      "title": "Evaluating chain-of-thought monitorability",
+      "type": "story"
+    },
+    "46355226": {
+      "id": 46355226,
+      "submittedAt": 1766419549000,
+      "title": "Intersect to Be Acquired by Google to Advance U.S. Energy Innovation",
+      "type": "story"
+    },
+    "46358812": {
+      "id": 46358812,
+      "submittedAt": 1766436203000,
+      "title": "ByteDance's valuation hits US$500B as US survival plan advances",
+      "type": "story"
+    },
+    "46360400": {
+      "id": 46360400,
+      "submittedAt": 1766445413000,
+      "title": "FCC bans foreign-made drones over national security, spying concerns",
+      "type": "story"
+    },
+    "46423967": {
+      "id": 46423967,
+      "submittedAt": 1767034306000,
+      "title": "The Arrival of Cheap 10GbE Realtek RTL8127 NIC Review",
+      "type": "story"
+    },
+    "46441665": {
+      "id": 46441665,
+      "submittedAt": 1767159088000,
+      "title": "ByteDance to pour US$14B into Nvidia chips in 2026",
+      "type": "story"
+    },
+    "46455846": {
+      "id": 46455846,
+      "submittedAt": 1767287715000,
+      "title": "No iPhone 18 Launch This Year",
+      "type": "story"
+    },
+    "46456215": {
+      "id": 46456215,
+      "submittedAt": 1767289950000,
+      "title": "Memory Subsystem Optimizations",
+      "type": "story"
+    },
+    "46504966": {
+      "id": 46504966,
+      "submittedAt": 1767647173000,
+      "title": "Boston Dynamics and DeepMind form new AI partnership",
+      "type": "story"
+    },
+    "46505434": {
+      "id": 46505434,
+      "submittedAt": 1767649511000,
+      "title": "Closing the capability gap between frontier AI and everyday use in 2026",
+      "type": "story"
+    },
+    "46520605": {
+      "id": 46520605,
+      "submittedAt": 1767743435000,
+      "title": "Discord to File Confidentially for IPO",
+      "type": "story"
+    },
+    "46533805": {
+      "id": 46533805,
+      "submittedAt": 1767823836000,
+      "title": "Anthropic Raising $10B at $350B Value",
+      "type": "story"
+    },
+    "46534542": {
+      "id": 46534542,
+      "submittedAt": 1767827274000,
+      "title": "Nanochat Miniseries v1",
+      "type": "story"
+    },
+    "46541776": {
+      "id": 46541776,
+      "submittedAt": 1767884257000,
+      "title": "SuperCoder: Assembly Program Superoptimization with Large Language Models",
+      "type": "story"
+    },
+    "46546783": {
+      "id": 46546783,
+      "submittedAt": 1767907912000,
+      "title": "Rust Is Perfectly Imperfect",
+      "type": "story"
+    },
+    "46559301": {
+      "id": 46559301,
+      "submittedAt": 1767992656000,
+      "title": "Deep Delta Learning",
+      "type": "story"
+    },
+    "46596845": {
+      "id": 46596845,
+      "submittedAt": 1768272869000,
+      "title": "First impressions of Claude Cowork, Anthropic's general agent",
+      "type": "story"
+    },
+    "46604487": {
+      "id": 46604487,
+      "submittedAt": 1768325753000,
+      "title": "Meta Seeks to Double Ray-Ban Glasses Output After Surge in Demand",
+      "type": "story"
+    },
+    "46607747": {
+      "id": 46607747,
+      "submittedAt": 1768337422000,
+      "title": "Netflix Weighs Amending Warner Bros. Bid to Make It All Cash",
+      "type": "story"
+    },
+    "46621843": {
+      "id": 46621843,
+      "submittedAt": 1768420093000,
+      "title": "Meta Lays Off 1,500 People in Metaverse Division",
+      "type": "story"
+    },
+    "46640420": {
+      "id": 46640420,
+      "submittedAt": 1768516748000,
+      "title": "Claude Code Diff View in Claude Desktop and Web",
+      "type": "story"
+    },
+    "46663526": {
+      "id": 46663526,
+      "submittedAt": 1768695202000,
+      "title": "A new way to call C from Java: how fast is it?",
+      "type": "story"
+    },
+    "46676206": {
+      "id": 46676206,
+      "submittedAt": 1768810467000,
+      "title": "Reading and Writing JFR Files Programmatically",
+      "type": "story"
+    },
+    "46684708": {
+      "id": 46684708,
+      "submittedAt": 1768857916000,
+      "title": "The assistant axis: situating and stabilizing the character of LLMs",
+      "type": "story"
+    },
+    "46692809": {
+      "id": 46692809,
+      "submittedAt": 1768922976000,
+      "title": "Netflix Amends Warner Bros. Deal to All Cash in Bidding War",
+      "type": "story"
+    },
+    "46713958": {
+      "id": 46713958,
+      "submittedAt": 1769044586000,
+      "title": "Designing AI-resistant technical evaluations",
+      "type": "story"
+    },
+    "46714987": {
+      "id": 46714987,
+      "submittedAt": 1769053082000,
+      "title": "Best Practices for Claude Code",
+      "type": "story"
+    },
+    "46726566": {
+      "id": 46726566,
+      "submittedAt": 1769125175000,
+      "title": "How Claude Code Works",
+      "type": "story"
+    },
+    "46801517": {
+      "id": 46801517,
+      "submittedAt": 1769634432000,
+      "title": "Meta Reports Q4 and Full Year 2025 Results",
+      "type": "story"
+    },
+    "46815978": {
+      "id": 46815978,
+      "submittedAt": 1769717866000,
+      "title": "Translate with ChatGPT",
+      "type": "story"
+    },
+    "46841361": {
+      "id": 46841361,
+      "submittedAt": 1769897028000,
+      "title": "Waymo Seeking About $16B Near $110B Valuation",
+      "type": "story"
+    },
+    "46842148": {
+      "id": 46842148,
+      "submittedAt": 1769903740000,
+      "title": "Boris Cherny: Tips for Using Claude Code",
+      "type": "story"
+    },
+    "46843566": {
+      "id": 46843566,
+      "submittedAt": 1769919536000,
+      "title": "Network Applications of Bloom Filters: A Survey [pdf]",
+      "type": "story"
+    },
+    "46851044": {
+      "id": 46851044,
+      "submittedAt": 1769993139000,
+      "title": "Silicon Valley Thinks TSMC Is Braking the AI Boom [video]",
+      "type": "story"
+    },
+    "46871932": {
+      "id": 46871932,
+      "submittedAt": 1770131452000,
+      "title": "China to ban 'hidden' car door handles to address safety fears",
+      "type": "story"
+    },
+    "46881751": {
+      "id": 46881751,
+      "submittedAt": 1770181961000,
+      "title": "Vibe Coding Design Study: Tlparse",
+      "type": "story"
+    },
+    "46894035": {
+      "id": 46894035,
+      "submittedAt": 1770251740000,
+      "title": "Alphabet expects 2026 capex in the range of $175B to $185B",
+      "type": "story"
+    },
+    "46900488": {
+      "id": 46900488,
+      "submittedAt": 1770304253000,
+      "title": "Claude Opus 4.6 and Claude Opus 4.6 Thinking are now live on Perplexity's APIs",
+      "type": "story"
+    },
+    "46906970": {
+      "id": 46906970,
+      "submittedAt": 1770334276000,
+      "title": "Amazon expects capex to hit $200B in 2026",
+      "type": "story"
+    },
+    "46909395": {
+      "id": 46909395,
+      "submittedAt": 1770354919000,
+      "title": "Building Highly Efficient Inference System for Recommenders Using PyTorch",
+      "type": "story"
+    },
+    "46919800": {
+      "id": 46919800,
+      "submittedAt": 1770422112000,
+      "title": "SpaceX Delays Mars Plans to Focus on Moon",
+      "type": "story"
+    },
+    "46920922": {
+      "id": 46920922,
+      "submittedAt": 1770433535000,
+      "title": "Hello world does not compile",
+      "type": "story"
+    },
+    "46999146": {
+      "id": 46999146,
+      "submittedAt": 1770959428000,
+      "title": "Waymo is asking DoorDash drivers to shut the doors of its self-driving cars",
+      "type": "story"
+    },
+    "47009132": {
+      "id": 47009132,
+      "submittedAt": 1771024435000,
+      "title": "Disney sends cease and desist letter to ByteDance over Seedance 2.0",
+      "type": "story"
+    },
+    "47027108": {
+      "id": 47027108,
+      "submittedAt": 1771186599000,
+      "title": "Speed Can Reindustrialize America",
+      "type": "story"
+    },
+    "47028013": {
+      "id": 47028013,
+      "submittedAt": 1771192455000,
+      "title": "I’m joining OpenAI",
+      "type": "story"
+    },
+    "47050681": {
+      "id": 47050681,
+      "submittedAt": 1771351346000,
+      "title": "Apple Ramps Up Work on Glasses, Pendant, and Camera AirPods for AI Era",
+      "type": "story"
+    },
+    "47051497": {
+      "excerpt": "In Claude",
+      "id": 47051497,
+      "submittedAt": 1771354672000,
+      "type": "comment"
+    },
+    "47061183": {
+      "id": 47061183,
+      "submittedAt": 1771424330000,
+      "title": "TamboUI, an open-source Terminal UI framework for Java",
+      "type": "story"
+    },
+    "47078859": {
+      "id": 47078859,
+      "submittedAt": 1771533251000,
+      "title": "Lessons from Building Claude Code: Prompt Caching Is Everything",
+      "type": "story"
+    },
+    "47126168": {
+      "id": 47126168,
+      "submittedAt": 1771870021000,
+      "title": "Writing about Agentic Engineering Patterns",
+      "type": "story"
+    },
+    "47127565": {
+      "id": 47127565,
+      "submittedAt": 1771875279000,
+      "title": "AI helps break the cost barrier to COBOL modernization",
+      "type": "story"
+    },
+    "47127582": {
+      "excerpt": "IBM down 1",
+      "id": 47127582,
+      "submittedAt": 1771875360000,
+      "type": "comment"
+    },
+    "47138047": {
+      "id": 47138047,
+      "submittedAt": 1771945455000,
+      "title": "Meta is planning stablecoin comeback in the second half of this year",
+      "type": "story"
+    },
+    "47141389": {
+      "id": 47141389,
+      "submittedAt": 1771960737000,
+      "title": "Claude Code Remote Control",
+      "type": "story"
+    },
+    "47142821": {
+      "id": 47142821,
+      "submittedAt": 1771966318000,
+      "title": "Stripe Considers Acquisition of All or Parts of PayPal",
+      "type": "story"
+    },
     "47144048": {
       "id": 47144048,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1771971306000,
+      "title": "Continue local sessions from any device with Remote Control",
       "type": "story"
     },
     "47161708": {
       "id": 47161708,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1772078782000,
+      "title": "Testing \"Raw\" GPU Cache Latency",
       "type": "story"
     },
     "47173198": {
       "id": 47173198,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1772146167000,
+      "title": "Claude Code Memory",
       "type": "story"
     },
     "47285607": {
       "id": 47285607,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1772871110000,
+      "title": "Claude Code Scheduled Tasks",
       "type": "story"
     },
     "47301017": {
       "id": 47301017,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1773001346000,
+      "title": "Prefix sums at gigabytes per second with ARM NEON",
       "type": "story"
     },
     "47329947": {
       "id": 47329947,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1773184329000,
+      "title": "Side questions with /btw in Claude Code",
       "type": "story"
     },
     "47367177": {
       "id": 47367177,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1773422607000,
+      "title": "JEP Draft: Enhanced Local Variable Declarations",
       "type": "story"
     },
     "47367233": {
+      "excerpt": "TLDR * D",
       "id": 47367233,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1773422898000,
       "type": "comment"
     },
     "47383956": {
       "id": 47383956,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1773544591000,
+      "title": "How compilers should evolve in the era of LLM coding",
       "type": "story"
     },
     "47395070": {
       "id": 47395070,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1773633397000,
+      "title": "How Pokémon Go is giving delivery robots an inch-perfect view of the world",
       "type": "story"
     },
     "47416548": {
       "id": 47416548,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1773773049000,
+      "title": "Java 26 is here",
       "type": "story"
     },
     "47452824": {
       "id": 47452824,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1774003495000,
+      "title": "Amazon plans smartphone comeback more than a decade after Fire Phone flop",
       "type": "story"
     },
     "47466905": {
       "id": 47466905,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1774100120000,
+      "title": "OpenAI to double workforce as business push intensifies",
       "type": "story"
     },
     "47495373": {
       "id": 47495373,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1774301507000,
+      "title": "Put Claude to work on your computer",
       "type": "story"
     },
     "47543923": {
       "id": 47543923,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1774625391000,
+      "title": "François Chollet: ARC-AGI-3, Beyond Deep Learning and a New Approach to ML [video]",
       "type": "story"
     },
     "47577277": {
       "id": 47577277,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1774892035000,
+      "title": "ADK for Java 1.0.0: Building the Future of AI Agents in Java",
       "type": "story"
     },
     "47595019": {
       "id": 47595019,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1775001122000,
+      "title": "Microsoft in Talks with Chevron, Engine No. 1 over $7B Texas Power Plant",
       "type": "story"
     },
     "47606229": {
       "id": 47606229,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1775075817000,
+      "title": "The State of Video Gaming in 2026",
       "type": "story"
     },
     "47796264": {
       "id": 47796264,
-      "lastDescendants": 1,
-      "lastKids": [
-        47797004
-      ],
       "submittedAt": 1776358694000,
+      "title": "Best practices for using Claude Opus 4.7 with Claude Code",
       "type": "story"
     },
     "47806021": {
       "id": 47806021,
-      "lastDescendants": 70,
-      "lastKids": [
-        47823009,
-        47824232,
-        47823637,
-        47822413,
-        47822450,
-        47821949,
-        47822127,
-        47822089,
-        47824376,
-        47822026,
-        47822404,
-        47822211,
-        47827464,
-        47826753,
-        47823172,
-        47822612,
-        47826224,
-        47823155,
-        47823019,
-        47824320
-      ],
       "submittedAt": 1776434247000,
+      "title": "What are skiplists good for?",
       "type": "story"
     },
     "47810006": {
       "id": 47810006,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1776456416000,
+      "title": "Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel",
       "type": "story"
     },
     "47827631": {
       "id": 47827631,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1776632631000,
+      "title": "The fastest way to match characters on ARM processors?",
       "type": "story"
     },
     "47834565": {
       "id": 47834565,
-      "lastDescendants": 377,
-      "lastKids": [
-        47836251,
-        47835603,
-        47839388,
-        47835483,
-        47834921,
-        47837133,
-        47834968,
-        47836403,
-        47842839,
-        47848684,
-        47835661,
-        47839756,
-        47838265,
-        47840827,
-        47835109,
-        47845311,
-        47837600,
-        47837378,
-        47835894,
-        47836764
-      ],
       "submittedAt": 1776693934000,
+      "title": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
       "type": "story"
     },
     "47837599": {
       "id": 47837599,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1776705803000,
+      "title": "Google Eyes New Chips to Speed Up AI Results, Challenging Nvidia",
       "type": "story"
     },
     "47855093": {
       "id": 47855093,
-      "lastDescendants": 6,
-      "lastKids": [
-        47861122,
-        47855229,
-        47856858,
-        47856784,
-        47857151
-      ],
       "submittedAt": 1776808663000,
+      "title": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
       "type": "story"
     },
     "47863217": {
       "id": 47863217,
-      "lastDescendants": 356,
-      "lastKids": [
-        47866085,
-        47869285,
-        47864835,
-        47865686,
-        47871917,
-        47866058,
-        47865232,
-        47868361,
-        47866642,
-        47869692,
-        47870719,
-        47864842,
-        47865577,
-        47867307,
-        47869542,
-        47868161,
-        47864883,
-        47868413,
-        47867973,
-        47869590
-      ],
       "submittedAt": 1776863998000,
+      "title": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
       "type": "story"
     },
     "47866860": {
       "id": 47866860,
-      "lastDescendants": 45,
-      "lastKids": [
-        47867392,
-        47871745,
-        47871835,
-        47868942,
-        47867354,
-        47870824,
-        47867718,
-        47870764,
-        47868659,
-        47869635,
-        47867446,
-        47868274,
-        47870648,
-        47871232,
-        47867493,
-        47868648,
-        47868342,
-        47869965,
-        47870656
-      ],
       "submittedAt": 1776880027000,
+      "title": "Workspace Agents in ChatGPT",
       "type": "story"
     },
     "47868778": {
+      "excerpt": "Wrong link",
       "id": 47868778,
-      "lastKids": [
-        47869997
-      ],
       "submittedAt": 1776889269000,
       "type": "comment"
     },
     "47870314": {
       "id": 47870314,
-      "lastDescendants": 18,
-      "lastKids": [
-        47870630,
-        47871210,
-        47870604,
-        47870771,
-        47870875,
-        47870485,
-        47870494
-      ],
       "submittedAt": 1776898200000,
+      "title": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
       "type": "story"
     },
     "47871484": {
       "id": 47871484,
-      "lastDescendants": 0,
-      "lastKids": [],
       "submittedAt": 1776909076000,
+      "title": "Microsoft looked at buying Cursor before SpaceX deal",
+      "type": "story"
+    },
+    "47878905": {
+      "id": 47878905,
+      "submittedAt": 1776966518000,
+      "title": "An update on recent Claude Code quality reports",
       "type": "story"
     }
   },
   "replies": {
-    "47797004": {
-      "author": "itmitica",
-      "discoveredAt": 1776914384833,
-      "id": 47797004,
-      "parentItemId": 47796264,
-      "parentItemTitle": "Best practices for using Claude Opus 4.7 with Claude Code",
-      "read": false,
-      "text": "What a jok",
-      "time": 1776361775000
-    },
     "47821949": {
       "author": "ahartmetz",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47821949,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -339,7 +2769,7 @@
     },
     "47822026": {
       "author": "mrjn",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47822026,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -349,7 +2779,7 @@
     },
     "47822089": {
       "author": "locknitpicker",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47822089,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -359,7 +2789,7 @@
     },
     "47822127": {
       "author": "winwang",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47822127,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -369,7 +2799,7 @@
     },
     "47822211": {
       "author": "tooltower",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47822211,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -377,9 +2807,19 @@
       "text": "In my pers",
       "time": 1776579994000
     },
+    "47822253": {
+      "author": "feverzsj",
+      "discoveredAt": 1776989667321,
+      "id": 47822253,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "If you nee",
+      "time": 1776580734000
+    },
     "47822404": {
       "author": "teiferer",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47822404,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -389,7 +2829,7 @@
     },
     "47822413": {
       "author": "josephg",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47822413,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -399,7 +2839,7 @@
     },
     "47822450": {
       "author": "bob1029",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47822450,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -409,7 +2849,7 @@
     },
     "47822612": {
       "author": "shawn_w",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47822612,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -419,7 +2859,7 @@
     },
     "47823009": {
       "author": "cremer",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47823009,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -429,7 +2869,7 @@
     },
     "47823019": {
       "author": "torben-friis",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47823019,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -437,9 +2877,19 @@
       "text": "Could some",
       "time": 1776591406000
     },
+    "47823054": {
+      "author": "fnordpiglet",
+      "discoveredAt": 1776989667321,
+      "id": 47823054,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "A major gl",
+      "time": 1776591832000
+    },
     "47823155": {
       "author": "aaa_aaa",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47823155,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -449,7 +2899,7 @@
     },
     "47823172": {
       "author": "medbar",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47823172,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -457,9 +2907,19 @@
       "text": "Skiplist o",
       "time": 1776593560000
     },
+    "47823414": {
+      "author": "m00dy",
+      "discoveredAt": 1776989667321,
+      "id": 47823414,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "It was rea",
+      "time": 1776596938000
+    },
     "47823637": {
       "author": "ozgrakkurt",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47823637,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -469,7 +2929,7 @@
     },
     "47824232": {
       "author": "carlsverre",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47824232,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -479,7 +2939,7 @@
     },
     "47824320": {
       "author": "esafak",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47824320,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -489,7 +2949,7 @@
     },
     "47824376": {
       "author": "torginus",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47824376,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -499,7 +2959,7 @@
     },
     "47826224": {
       "author": "einpoklum",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47826224,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -509,7 +2969,7 @@
     },
     "47826753": {
       "author": "maxtaco",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47826753,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -517,9 +2977,19 @@
       "text": "Backpointe",
       "time": 1776625717000
     },
+    "47827294": {
+      "author": "calvinmorrison",
+      "discoveredAt": 1776989667321,
+      "id": 47827294,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "Cyrus uses",
+      "time": 1776629749000
+    },
     "47827464": {
       "author": "talideon",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47827464,
       "parentItemId": 47806021,
       "parentItemTitle": "What are skiplists good for?",
@@ -527,9 +2997,29 @@
       "text": "Plenty, bu",
       "time": 1776631194000
     },
+    "47827567": {
+      "author": "ncruces",
+      "discoveredAt": 1776989667321,
+      "id": 47827567,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "I guess I&",
+      "time": 1776632174000
+    },
+    "47827803": {
+      "author": "siddsukh",
+      "discoveredAt": 1776989667321,
+      "id": 47827803,
+      "parentItemId": 47806021,
+      "parentItemTitle": "What are skiplists good for?",
+      "read": false,
+      "text": "The skiptr",
+      "time": 1776634365000
+    },
     "47834921": {
       "author": "jjice",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47834921,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -539,7 +3029,7 @@
     },
     "47834968": {
       "author": "trvz",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47834968,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -549,7 +3039,7 @@
     },
     "47835109": {
       "author": "Oras",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47835109,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -559,7 +3049,7 @@
     },
     "47835483": {
       "author": "0xbadcafebee",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47835483,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -569,7 +3059,7 @@
     },
     "47835603": {
       "author": "ninjahawk1",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47835603,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -579,7 +3069,7 @@
     },
     "47835661": {
       "author": "atilimcetin",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47835661,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -589,7 +3079,7 @@
     },
     "47835894": {
       "author": "DeathArrow",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47835894,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -599,7 +3089,7 @@
     },
     "47836251": {
       "author": "alex7o",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47836251,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -609,7 +3099,7 @@
     },
     "47836403": {
       "author": "wg0",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47836403,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -619,7 +3109,7 @@
     },
     "47836764": {
       "author": "marsulta",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47836764,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -629,7 +3119,7 @@
     },
     "47837133": {
       "author": "jdw64",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47837133,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -639,7 +3129,7 @@
     },
     "47837378": {
       "author": "chatmasta",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47837378,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -649,7 +3139,7 @@
     },
     "47837600": {
       "author": "XCSme",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47837600,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -659,7 +3149,7 @@
     },
     "47838265": {
       "author": "o10449366",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47838265,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -667,9 +3157,29 @@
       "text": "I have the",
       "time": 1776708449000
     },
+    "47838391": {
+      "author": "dakolli",
+      "discoveredAt": 1776989667321,
+      "id": 47838391,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "ToKeN PrIc",
+      "time": 1776708953000
+    },
+    "47838599": {
+      "author": "xmly",
+      "discoveredAt": 1776989667321,
+      "id": 47838599,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "Very impre",
+      "time": 1776709860000
+    },
     "47839388": {
       "author": "seanw265",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47839388,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -679,7 +3189,7 @@
     },
     "47839756": {
       "author": "fr3on",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47839756,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -687,9 +3197,19 @@
       "text": "The irony ",
       "time": 1776715238000
     },
+    "47840129": {
+      "author": "Aeroi",
+      "discoveredAt": 1776989667321,
+      "id": 47840129,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "why do peo",
+      "time": 1776717193000
+    },
     "47840827": {
       "author": "djyde",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47840827,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -699,7 +3219,7 @@
     },
     "47842839": {
       "author": "greyskull",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47842839,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -707,9 +3227,29 @@
       "text": "I&#x27;ve ",
       "time": 1776729652000
     },
+    "47843393": {
+      "author": "digimantis",
+      "discoveredAt": 1776989667321,
+      "id": 47843393,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "i dont get",
+      "time": 1776734196000
+    },
+    "47844847": {
+      "author": "fragmede",
+      "discoveredAt": 1776989667321,
+      "id": 47844847,
+      "parentItemId": 47834565,
+      "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "read": false,
+      "text": "This thing",
+      "time": 1776748936000
+    },
     "47845311": {
       "author": "johnnyApplePRNG",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47845311,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -719,7 +3259,7 @@
     },
     "47848684": {
       "author": "edg5000",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47848684,
       "parentItemId": 47834565,
       "parentItemTitle": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
@@ -729,7 +3269,7 @@
     },
     "47856784": {
       "author": "ineedasername",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47856784,
       "parentItemId": 47855093,
       "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
@@ -739,7 +3279,7 @@
     },
     "47856858": {
       "author": "htrp",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47856858,
       "parentItemId": 47855093,
       "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
@@ -749,7 +3289,7 @@
     },
     "47857151": {
       "author": "xvxvx",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47857151,
       "parentItemId": 47855093,
       "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
@@ -759,7 +3299,7 @@
     },
     "47861122": {
       "author": "lccerina",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47861122,
       "parentItemId": 47855093,
       "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
@@ -767,9 +3307,29 @@
       "text": "On other n",
       "time": 1776850007000
     },
+    "47864015": {
+      "author": "amunozo",
+      "discoveredAt": 1776989667321,
+      "id": 47864015,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "A bit skep",
+      "time": 1776867357000
+    },
+    "47864710": {
+      "author": "pama",
+      "discoveredAt": 1776989667321,
+      "id": 47864710,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Has anyone",
+      "time": 1776870476000
+    },
     "47864835": {
       "author": "anonzzzies",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47864835,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -779,7 +3339,7 @@
     },
     "47864842": {
       "author": "vladgur",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47864842,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -789,7 +3349,7 @@
     },
     "47864883": {
       "author": "originalvichy",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47864883,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -797,9 +3357,19 @@
       "text": "Good news!",
       "time": 1776871173000
     },
+    "47864886": {
+      "author": "spwa4",
+      "discoveredAt": 1776989667321,
+      "id": 47864886,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Unsloth qu",
+      "time": 1776871190000
+    },
     "47865232": {
       "author": "sietsietnoac",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47865232,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -807,9 +3377,29 @@
       "text": "Generate a",
       "time": 1776872594000
     },
+    "47865264": {
+      "author": "UncleOxidant",
+      "discoveredAt": 1776989667321,
+      "id": 47865264,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I&#x27;ve ",
+      "time": 1776872708000
+    },
+    "47865443": {
+      "author": "Mr_Eri_Atlov",
+      "discoveredAt": 1776989667321,
+      "id": 47865443,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Excited to",
+      "time": 1776873257000
+    },
     "47865577": {
       "author": "vibe42",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47865577,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -819,7 +3409,7 @@
     },
     "47865686": {
       "author": "jameson",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47865686,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -829,7 +3419,7 @@
     },
     "47866058": {
       "author": "syntaxing",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47866058,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -839,7 +3429,7 @@
     },
     "47866085": {
       "author": "simonw",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47866085,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -847,9 +3437,19 @@
       "text": "The pelica",
       "time": 1776876409000
     },
+    "47866530": {
+      "author": "butz",
+      "discoveredAt": 1776989667321,
+      "id": 47866530,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Are there ",
+      "time": 1776878636000
+    },
     "47866642": {
       "author": "mark_l_watson",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47866642,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -857,9 +3457,29 @@
       "text": "I have bee",
       "time": 1776879068000
     },
+    "47866898": {
+      "author": "LowLevelKernel",
+      "discoveredAt": 1776989667321,
+      "id": 47866898,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "How much V",
+      "time": 1776880226000
+    },
+    "47867169": {
+      "author": "jedisct1",
+      "discoveredAt": 1776989667321,
+      "id": 47867169,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I really l",
+      "time": 1776881472000
+    },
     "47867307": {
       "author": "2001zhaozhao",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47867307,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -869,7 +3489,7 @@
     },
     "47867354": {
       "author": "mhitza",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47867354,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -879,7 +3499,7 @@
     },
     "47867392": {
       "author": "jryio",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47867392,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -889,7 +3509,7 @@
     },
     "47867446": {
       "author": "pzo",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47867446,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -897,9 +3517,19 @@
       "text": "I think I ",
       "time": 1776882711000
     },
+    "47867603": {
+      "author": "xrd",
+      "discoveredAt": 1776989667321,
+      "id": 47867603,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I&#x27;m e",
+      "time": 1776883481000
+    },
     "47867718": {
       "author": "Jayakumark",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47867718,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -907,9 +3537,19 @@
       "text": "Looks like",
       "time": 1776884060000
     },
+    "47867972": {
+      "author": "blurbleblurble",
+      "discoveredAt": 1776989667321,
+      "id": 47867972,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "It&#x27;s ",
+      "time": 1776885305000
+    },
     "47867973": {
       "author": "docheinestages",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47867973,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -917,9 +3557,19 @@
       "text": "Has anyone",
       "time": 1776885306000
     },
+    "47868056": {
+      "author": "objektif",
+      "discoveredAt": 1776989667321,
+      "id": 47868056,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Does anyon",
+      "time": 1776885678000
+    },
     "47868161": {
       "author": "lgessler",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47868161,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -927,9 +3577,19 @@
       "text": "I&#x27;ll ",
       "time": 1776886197000
     },
+    "47868213": {
+      "author": "htrp",
+      "discoveredAt": 1776989667321,
+      "id": 47868213,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Any compar",
+      "time": 1776886467000
+    },
     "47868274": {
       "author": "anthuswilliams",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47868274,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -939,7 +3599,7 @@
     },
     "47868342": {
       "author": "TIPSIO",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47868342,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -949,7 +3609,7 @@
     },
     "47868361": {
       "author": "zkmon",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47868361,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -959,7 +3619,7 @@
     },
     "47868413": {
       "author": "navbaker",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47868413,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -969,7 +3629,7 @@
     },
     "47868648": {
       "author": "m4rkuskk",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47868648,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -979,7 +3639,7 @@
     },
     "47868659": {
       "author": "dennisy",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47868659,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -987,9 +3647,19 @@
       "text": "I feel for",
       "time": 1776888694000
     },
+    "47868719": {
+      "author": "richstokes",
+      "discoveredAt": 1776989667321,
+      "id": 47868719,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "Are there ",
+      "time": 1776888915000
+    },
     "47868942": {
       "author": "neosat",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47868942,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -997,9 +3667,29 @@
       "text": "Tried it t",
       "time": 1776889977000
     },
+    "47869149": {
+      "author": "vocoda",
+      "discoveredAt": 1776989667321,
+      "id": 47869149,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I wonder w",
+      "time": 1776891139000
+    },
+    "47869197": {
+      "author": "thot_experiment",
+      "discoveredAt": 1776989667321,
+      "id": 47869197,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "no FIM tho",
+      "time": 1776891487000
+    },
     "47869285": {
       "author": "finnjohnsen2",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47869285,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -1009,7 +3699,7 @@
     },
     "47869542": {
       "author": "mft_",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47869542,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -1019,7 +3709,7 @@
     },
     "47869590": {
       "author": "storus",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47869590,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -1029,7 +3719,7 @@
     },
     "47869635": {
       "author": "brianjking",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47869635,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -1039,7 +3729,7 @@
     },
     "47869692": {
       "author": "datadrivenangel",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47869692,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -1049,7 +3739,7 @@
     },
     "47869965": {
       "author": "nazca",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47869965,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -1059,9 +3749,8 @@
     },
     "47869997": {
       "author": "tomhow",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47869997,
-      "parentAuthor": "mfiguiere",
       "parentExcerpt": "Wrong link",
       "parentItemId": 47868778,
       "read": false,
@@ -1070,7 +3759,7 @@
     },
     "47870485": {
       "author": "Havoc",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47870485,
       "parentItemId": 47870314,
       "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
@@ -1080,7 +3769,7 @@
     },
     "47870494": {
       "author": "FireBeyond",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47870494,
       "parentItemId": 47870314,
       "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
@@ -1090,7 +3779,7 @@
     },
     "47870604": {
       "author": "dataviz1000",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47870604,
       "parentItemId": 47870314,
       "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
@@ -1100,7 +3789,7 @@
     },
     "47870630": {
       "author": "doener",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47870630,
       "parentItemId": 47870314,
       "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
@@ -1110,7 +3799,7 @@
     },
     "47870648": {
       "author": "hereme888",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47870648,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -1120,7 +3809,7 @@
     },
     "47870719": {
       "author": "n8henrie",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47870719,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
@@ -1130,7 +3819,7 @@
     },
     "47870764": {
       "author": "throwaway2016a",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47870764,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -1140,7 +3829,7 @@
     },
     "47870771": {
       "author": "qwerpy",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47870771,
       "parentItemId": 47870314,
       "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
@@ -1150,7 +3839,7 @@
     },
     "47870824": {
       "author": "zenapollo",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47870824,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -1160,7 +3849,7 @@
     },
     "47870875": {
       "author": "addyhathaway",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47870875,
       "parentItemId": 47870314,
       "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
@@ -1168,9 +3857,19 @@
       "text": "I bought a",
       "time": 1776903061000
     },
+    "47870886": {
+      "author": "reddit_clone",
+      "discoveredAt": 1776989667321,
+      "id": 47870886,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "What can I",
+      "time": 1776903144000
+    },
     "47871210": {
       "author": "jijojv",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47871210,
       "parentItemId": 47870314,
       "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
@@ -1180,7 +3879,7 @@
     },
     "47871232": {
       "author": "eieke",
-      "discoveredAt": 1776914395833,
+      "discoveredAt": 1776989667321,
       "id": 47871232,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -1190,7 +3889,7 @@
     },
     "47871745": {
       "author": "skybrian",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47871745,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -1200,7 +3899,7 @@
     },
     "47871835": {
       "author": "faxuss",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47871835,
       "parentItemId": 47866860,
       "parentItemTitle": "Workspace Agents in ChatGPT",
@@ -1210,19 +3909,1019 @@
     },
     "47871917": {
       "author": "RandyOrion",
-      "discoveredAt": 1776914384833,
+      "discoveredAt": 1776989667321,
       "id": 47871917,
       "parentItemId": 47863217,
       "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
       "read": false,
       "text": "Thank you ",
       "time": 1776913994000
+    },
+    "47871981": {
+      "author": "therobots927",
+      "discoveredAt": 1776989667321,
+      "id": 47871981,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "“Altman an",
+      "time": 1776914794000
+    },
+    "47872811": {
+      "author": "10keane",
+      "discoveredAt": 1776989667321,
+      "id": 47872811,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "i actually",
+      "time": 1776926425000
+    },
+    "47872836": {
+      "author": "ANaimi",
+      "discoveredAt": 1776989667321,
+      "id": 47872836,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "I guess I ",
+      "time": 1776926758000
+    },
+    "47873176": {
+      "author": "eur0pa",
+      "discoveredAt": 1776989667321,
+      "id": 47873176,
+      "parentItemId": 47855093,
+      "parentItemTitle": "Anthropic's Mythos Model Is Being Accessed by Unauthorized Users",
+      "read": false,
+      "text": "It&#x27;s ",
+      "time": 1776930496000
+    },
+    "47873794": {
+      "author": "juanre",
+      "discoveredAt": 1776989667321,
+      "id": 47873794,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "Two proble",
+      "time": 1776937256000
+    },
+    "47873855": {
+      "author": "pja",
+      "discoveredAt": 1776989667321,
+      "id": 47873855,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "I know thi",
+      "time": 1776937905000
+    },
+    "47873925": {
+      "author": "Incipient",
+      "discoveredAt": 1776989667321,
+      "id": 47873925,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "I still ca",
+      "time": 1776938737000
+    },
+    "47873933": {
+      "author": "delegate",
+      "discoveredAt": 1776989667321,
+      "id": 47873933,
+      "parentItemId": 47866860,
+      "parentItemTitle": "Workspace Agents in ChatGPT",
+      "read": false,
+      "text": "Who asked ",
+      "time": 1776938848000
+    },
+    "47874016": {
+      "author": "Zigurd",
+      "discoveredAt": 1776989667321,
+      "id": 47874016,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "Especially",
+      "time": 1776939754000
+    },
+    "47874162": {
+      "author": "yamajun93",
+      "discoveredAt": 1776989667321,
+      "id": 47874162,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "The benchm",
+      "time": 1776941260000
+    },
+    "47874899": {
+      "author": "Avlin67",
+      "discoveredAt": 1776989667321,
+      "id": 47874899,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "130 token ",
+      "time": 1776946944000
+    },
+    "47876200": {
+      "author": "synergy20",
+      "discoveredAt": 1776989667321,
+      "id": 47876200,
+      "parentItemId": 47863217,
+      "parentItemTitle": "Qwen3.6-27B: Flagship-Level Coding in a 27B Dense Model",
+      "read": false,
+      "text": "wish I had",
+      "time": 1776954628000
+    },
+    "47878977": {
+      "author": "jryio",
+      "discoveredAt": 1776989667321,
+      "id": 47878977,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "1. They ch",
+      "time": 1776966822000
+    },
+    "47879051": {
+      "author": "bearjaws",
+      "discoveredAt": 1776989667321,
+      "id": 47879051,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "The issue ",
+      "time": 1776967178000
+    },
+    "47879064": {
+      "author": "Robdel12",
+      "discoveredAt": 1776989667321,
+      "id": 47879064,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Wow, bad e",
+      "time": 1776967220000
+    },
+    "47879106": {
+      "author": "Alifatisk",
+      "discoveredAt": 1776989667321,
+      "id": 47879106,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "It’s incre",
+      "time": 1776967381000
+    },
+    "47879107": {
+      "author": "foota",
+      "discoveredAt": 1776989667321,
+      "id": 47879107,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; On Ap",
+      "time": 1776967384000
+    },
+    "47879112": {
+      "author": "WhitneyLand",
+      "discoveredAt": 1776989667321,
+      "id": 47879112,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Did they n",
+      "time": 1776967410000
+    },
+    "47879140": {
+      "author": "teaearlgraycold",
+      "discoveredAt": 1776989667321,
+      "id": 47879140,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; On Ma",
+      "time": 1776967516000
+    },
+    "47879170": {
+      "author": "ayhanfuat",
+      "discoveredAt": 1776989667321,
+      "id": 47879170,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Reading th",
+      "time": 1776967628000
+    },
+    "47879205": {
+      "author": "dainiusse",
+      "discoveredAt": 1776989667321,
+      "id": 47879205,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Corporate ",
+      "time": 1776967747000
+    },
+    "47879232": {
+      "author": "xlayn",
+      "discoveredAt": 1776989667321,
+      "id": 47879232,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "If anthrop",
+      "time": 1776967847000
+    },
+    "47879260": {
+      "author": "everdrive",
+      "discoveredAt": 1776989667321,
+      "id": 47879260,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "I&#x27;ve ",
+      "time": 1776967970000
+    },
+    "47879282": {
+      "author": "setnone",
+      "discoveredAt": 1776989667321,
+      "id": 47879282,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Good on th",
+      "time": 1776968058000
+    },
+    "47879327": {
+      "author": "dataviz1000",
+      "discoveredAt": 1776989667321,
+      "id": 47879327,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "This is th",
+      "time": 1776968195000
+    },
+    "47879338": {
+      "author": "natdempk",
+      "discoveredAt": 1776989667321,
+      "id": 47879338,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "As an end-",
+      "time": 1776968233000
+    },
+    "47879358": {
+      "author": "2001zhaozhao",
+      "discoveredAt": 1776989667321,
+      "id": 47879358,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "How about ",
+      "time": 1776968288000
+    },
+    "47879390": {
+      "author": "motbus3",
+      "discoveredAt": 1776989667321,
+      "id": 47879390,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "I had simi",
+      "time": 1776968418000
+    },
+    "47879397": {
+      "author": "MillionOClock",
+      "discoveredAt": 1776989667321,
+      "id": 47879397,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "I see the ",
+      "time": 1776968439000
+    },
+    "47879475": {
+      "author": "einrealist",
+      "discoveredAt": 1776989667321,
+      "id": 47879475,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Is &#x27;r",
+      "time": 1776968726000
+    },
+    "47879561": {
+      "author": "6keZbCECT2uB",
+      "discoveredAt": 1776989667321,
+      "id": 47879561,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&quot;On M",
+      "time": 1776969027000
+    },
+    "47879675": {
+      "author": "lukebechtel",
+      "discoveredAt": 1776989667321,
+      "id": 47879675,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Some peopl",
+      "time": 1776969380000
+    },
+    "47879676": {
+      "author": "lifthrasiir",
+      "discoveredAt": 1776989667321,
+      "id": 47879676,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Is it just",
+      "time": 1776969382000
+    },
+    "47879685": {
+      "author": "jpcompartir",
+      "discoveredAt": 1776989667321,
+      "id": 47879685,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Anthropic ",
+      "time": 1776969401000
+    },
+    "47879700": {
+      "author": "podnami",
+      "discoveredAt": 1776989667321,
+      "id": 47879700,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "They lost ",
+      "time": 1776969524000
+    },
+    "47879725": {
+      "author": "rishabhaiover",
+      "discoveredAt": 1776989667321,
+      "id": 47879725,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Boris gasl",
+      "time": 1776969593000
+    },
+    "47879753": {
+      "author": "bityard",
+      "discoveredAt": 1776989667321,
+      "id": 47879753,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "My hypothe",
+      "time": 1776969689000
+    },
+    "47879766": {
+      "author": "systemvoltage",
+      "discoveredAt": 1776989667321,
+      "id": 47879766,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Interestin",
+      "time": 1776969733000
+    },
+    "47879804": {
+      "author": "troupo",
+      "discoveredAt": 1776989667321,
+      "id": 47879804,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; they ",
+      "time": 1776969868000
+    },
+    "47879844": {
+      "author": "munk-a",
+      "discoveredAt": 1776989667321,
+      "id": 47879844,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "It&#x27;s ",
+      "time": 1776969985000
+    },
+    "47879849": {
+      "author": "bauerd",
+      "discoveredAt": 1776989667321,
+      "id": 47879849,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt;On Mar",
+      "time": 1776970000000
+    },
+    "47879856": {
+      "author": "davidfstr",
+      "discoveredAt": 1776989667321,
+      "id": 47879856,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Good on An",
+      "time": 1776970014000
+    },
+    "47879871": {
+      "author": "petervandijck",
+      "discoveredAt": 1776989667321,
+      "id": 47879871,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "I have not",
+      "time": 1776970066000
+    },
+    "47879905": {
+      "author": "KronisLV",
+      "discoveredAt": 1776989667321,
+      "id": 47879905,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "This reads",
+      "time": 1776970181000
+    },
+    "47879907": {
+      "author": "tibbydudeza",
+      "discoveredAt": 1776989667321,
+      "id": 47879907,
+      "parentItemId": 47870314,
+      "parentItemTitle": "Tesla admits HW3 owners need upgrades for true 'Full Self-Driving'",
+      "read": false,
+      "text": "The cult a",
+      "time": 1776970191000
+    },
+    "47880011": {
+      "author": "0gs",
+      "discoveredAt": 1776989667321,
+      "id": 47880011,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "wow resett",
+      "time": 1776970604000
+    },
+    "47880121": {
+      "author": "ElFitz",
+      "discoveredAt": 1776989667321,
+      "id": 47880121,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Now we kno",
+      "time": 1776971088000
+    },
+    "47880142": {
+      "author": "VadimPR",
+      "discoveredAt": 1776989667321,
+      "id": 47880142,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Appreciate",
+      "time": 1776971186000
+    },
+    "47880170": {
+      "author": "nickdothutton",
+      "discoveredAt": 1776989667321,
+      "id": 47880170,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "I presume ",
+      "time": 1776971318000
+    },
+    "47880213": {
+      "author": "arjie",
+      "discoveredAt": 1776989667321,
+      "id": 47880213,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Useful upd",
+      "time": 1776971465000
+    },
+    "47880230": {
+      "author": "ctoth",
+      "discoveredAt": 1776989667321,
+      "id": 47880230,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; As of",
+      "time": 1776971530000
+    },
+    "47880253": {
+      "author": "puppystench",
+      "discoveredAt": 1776989667321,
+      "id": 47880253,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "The Claude",
+      "time": 1776971652000
+    },
+    "47880311": {
+      "author": "walthamstow",
+      "discoveredAt": 1776989667321,
+      "id": 47880311,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "So we were",
+      "time": 1776971907000
+    },
+    "47880320": {
+      "author": "yuvrajmalgat",
+      "discoveredAt": 1776989667321,
+      "id": 47880320,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "ohh",
+      "time": 1776971936000
+    },
+    "47880366": {
+      "author": "hajile",
+      "discoveredAt": 1776989667321,
+      "id": 47880366,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "My takeawa",
+      "time": 1776972071000
+    },
+    "47880370": {
+      "author": "jameson",
+      "discoveredAt": 1776989667321,
+      "id": 47880370,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; &quot",
+      "time": 1776972084000
+    },
+    "47880395": {
+      "author": "whalesalad",
+      "discoveredAt": 1776989667321,
+      "id": 47880395,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "I genuinel",
+      "time": 1776972191000
+    },
+    "47880403": {
+      "author": "pxc",
+      "discoveredAt": 1776989667321,
+      "id": 47880403,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "One of Ant",
+      "time": 1776972228000
+    },
+    "47880433": {
+      "author": "cedws",
+      "discoveredAt": 1776989667321,
+      "id": 47880433,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt;On Apr",
+      "time": 1776972341000
+    },
+    "47880509": {
+      "author": "arkariarn",
+      "discoveredAt": 1776989667321,
+      "id": 47880509,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "I see some",
+      "time": 1776972615000
+    },
+    "47880542": {
+      "author": "tontinton",
+      "discoveredAt": 1776989667321,
+      "id": 47880542,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "or you can",
+      "time": 1776972731000
+    },
+    "47880558": {
+      "author": "jruz",
+      "discoveredAt": 1776989667321,
+      "id": 47880558,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Too late b",
+      "time": 1776972812000
+    },
+    "47880621": {
+      "author": "gilrain",
+      "discoveredAt": 1776989667321,
+      "id": 47880621,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Hi Boris, ",
+      "time": 1776973117000
+    },
+    "47880663": {
+      "author": "karsinkk",
+      "discoveredAt": 1776989667321,
+      "id": 47880663,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&quot; Com",
+      "time": 1776973269000
+    },
+    "47880724": {
+      "author": "ramesh31",
+      "discoveredAt": 1776989667321,
+      "id": 47880724,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Effort sho",
+      "time": 1776973534000
+    },
+    "47880728": {
+      "author": "antirez",
+      "discoveredAt": 1776989667321,
+      "id": 47880728,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Zero QA ba",
+      "time": 1776973554000
+    },
+    "47880749": {
+      "author": "cute_boi",
+      "discoveredAt": 1776989667321,
+      "id": 47880749,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Honestly, ",
+      "time": 1776973607000
+    },
+    "47880766": {
+      "author": "o10449366",
+      "discoveredAt": 1776989667321,
+      "id": 47880766,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Resuming f",
+      "time": 1776973672000
+    },
+    "47880847": {
+      "author": "throwaway2027",
+      "discoveredAt": 1776989667321,
+      "id": 47880847,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Cool but I",
+      "time": 1776973954000
+    },
+    "47880871": {
+      "author": "rfc_1149",
+      "discoveredAt": 1776989667321,
+      "id": 47880871,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "The third ",
+      "time": 1776974053000
+    },
+    "47880935": {
+      "author": "whalesalad",
+      "discoveredAt": 1776989667321,
+      "id": 47880935,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "The funny ",
+      "time": 1776974295000
+    },
+    "47881186": {
+      "author": "Rapzid",
+      "discoveredAt": 1776989667321,
+      "id": 47881186,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; On Ma",
+      "time": 1776975241000
+    },
+    "47881201": {
+      "author": "kristianc",
+      "discoveredAt": 1776989667321,
+      "id": 47881201,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "To think w",
+      "time": 1776975282000
+    },
+    "47881260": {
+      "author": "dcchambers",
+      "discoveredAt": 1776989667321,
+      "id": 47881260,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "So it turn",
+      "time": 1776975482000
+    },
+    "47881436": {
+      "author": "psubocz",
+      "discoveredAt": 1776989667321,
+      "id": 47881436,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; All t",
+      "time": 1776976135000
+    },
+    "47881481": {
+      "author": "sutterd",
+      "discoveredAt": 1776989667321,
+      "id": 47881481,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "What kind ",
+      "time": 1776976350000
+    },
+    "47881535": {
+      "author": "behat",
+      "discoveredAt": 1776989667321,
+      "id": 47881535,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "This is a ",
+      "time": 1776976603000
+    },
+    "47881597": {
+      "author": "jwpapi",
+      "discoveredAt": 1776989667321,
+      "id": 47881597,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Those are ",
+      "time": 1776976835000
+    },
+    "47881671": {
+      "author": "taytus",
+      "discoveredAt": 1776989667321,
+      "id": 47881671,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "They shoul",
+      "time": 1776977144000
+    },
+    "47881734": {
+      "author": "hintymad",
+      "discoveredAt": 1776989667321,
+      "id": 47881734,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; On Ma",
+      "time": 1776977375000
+    },
+    "47881815": {
+      "author": "vintagedave",
+      "discoveredAt": 1776989667321,
+      "id": 47881815,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; <i>To",
+      "time": 1776977712000
+    },
+    "47881848": {
+      "author": "8note",
+      "discoveredAt": 1776989667321,
+      "id": 47881848,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "something ",
+      "time": 1776977844000
+    },
+    "47881852": {
+      "author": "maxrev17",
+      "discoveredAt": 1776989667321,
+      "id": 47881852,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Please for",
+      "time": 1776977856000
+    },
+    "47881877": {
+      "author": "EugeneOZ",
+      "discoveredAt": 1776989667321,
+      "id": 47881877,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "If you thi",
+      "time": 1776977965000
+    },
+    "47882225": {
+      "author": "ankit219",
+      "discoveredAt": 1776989667321,
+      "id": 47882225,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "An interes",
+      "time": 1776979313000
+    },
+    "47882324": {
+      "author": "MrOrelliOReilly",
+      "discoveredAt": 1776989667321,
+      "id": 47882324,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "IMO this i",
+      "time": 1776979815000
+    },
+    "47882448": {
+      "author": "lherron",
+      "discoveredAt": 1776989667321,
+      "id": 47882448,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Are they a",
+      "time": 1776980413000
+    },
+    "47882484": {
+      "author": "rebolek",
+      "discoveredAt": 1776989667321,
+      "id": 47882484,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "&gt; On Ap",
+      "time": 1776980576000
+    },
+    "47882624": {
+      "author": "vicchenai",
+      "discoveredAt": 1776989667321,
+      "id": 47882624,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "had this h",
+      "time": 1776981264000
+    },
+    "47882658": {
+      "author": "ramoz",
+      "discoveredAt": 1776989667321,
+      "id": 47882658,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Opus 4.7 i",
+      "time": 1776981457000
+    },
+    "47882769": {
+      "author": "skeledrew",
+      "discoveredAt": 1776989667321,
+      "id": 47882769,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Some of th",
+      "time": 1776982062000
+    },
+    "47883063": {
+      "author": "deaux",
+      "discoveredAt": 1776989667321,
+      "id": 47883063,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "They had t",
+      "time": 1776983593000
+    },
+    "47883125": {
+      "author": "kamranjon",
+      "discoveredAt": 1776989667321,
+      "id": 47883125,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "This black",
+      "time": 1776983922000
+    },
+    "47883233": {
+      "author": "zem",
+      "discoveredAt": 1776989667321,
+      "id": 47883233,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "ugh, cachi",
+      "time": 1776984488000
+    },
+    "47883472": {
+      "author": "russellthehippo",
+      "discoveredAt": 1776989667321,
+      "id": 47883472,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Damn it wa",
+      "time": 1776986146000
+    },
+    "47883496": {
+      "author": "ritonlajoie",
+      "discoveredAt": 1776989667321,
+      "id": 47883496,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "yesterday ",
+      "time": 1776986282000
+    },
+    "47883626": {
+      "author": "cmenge",
+      "discoveredAt": 1776989667321,
+      "id": 47883626,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Bit surpri",
+      "time": 1776987196000
+    },
+    "47883667": {
+      "author": "hirako2000",
+      "discoveredAt": 1776989667321,
+      "id": 47883667,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "In other w",
+      "time": 1776987439000
+    },
+    "47883730": {
+      "author": "tdg5",
+      "discoveredAt": 1776989667321,
+      "id": 47883730,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "I missed t",
+      "time": 1776987929000
+    },
+    "47883892": {
+      "author": "Implicated",
+      "discoveredAt": 1776989667321,
+      "id": 47883892,
+      "parentItemId": 47878905,
+      "parentItemTitle": "An update on recent Claude Code quality reports",
+      "read": false,
+      "text": "Just as a ",
+      "time": 1776989376000
     }
   },
   "timestamps": {
-    "lastDailyScan": null,
-    "lastTick": null,
-    "lastUserSync": 1776914395833,
-    "lastWeeklyScan": null
+    "backfillSweepFloor": 0,
+    "lastAuthorSync": 1776989678321,
+    "lastBackfillSweepAt": 1776989667321,
+    "lastCommentPoll": 1776989678321
   }
 }

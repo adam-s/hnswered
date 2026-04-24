@@ -172,8 +172,10 @@ async function analyzeUser(userSummary) {
   }
 
   // 5. missed-replies — for each monitored item, fetch HN's current kids and
-  //    find any kid that's NOT in extension's lastKids AND was posted older
-  //    than the tolerance window. Sample up to 5 items.
+  //    find any live direct child that did NOT surface in the extension's
+  //    `replies` table, and was posted older than the tolerance window. Algolia
+  //    excludes dead/deleted by design; we do the same filter here so the
+  //    comparison is apples-to-apples.
   const surfaced = new Set(replies.map((r) => r.id));
   let missed = [];
   for (const m of sample) {
@@ -181,13 +183,11 @@ async function analyzeUser(userSummary) {
     await sleep(50);
     if (!item) continue;
     const liveKids = item.kids ?? [];
-    const extKids = new Set(m.lastKids ?? []);
-    const newKids = liveKids.filter((id) => !extKids.has(id));
-    for (const kidId of newKids.slice(0, 5)) {
+    for (const kidId of liveKids.slice(0, 10)) {
       const kid = await hn(`/item/${kidId}.json`);
       await sleep(50);
       if (!kid || kid.deleted || kid.dead) continue;
-      // Skip the user's own replies (the extension correctly filters these).
+      // Skip the user's own replies (extension correctly filters these).
       if ((kid.by ?? '').toLowerCase() === userLc) continue;
       const ageMs = auditEndedAt - kid.time * 1000;
       if (ageMs > tolerance && !surfaced.has(kidId)) {
