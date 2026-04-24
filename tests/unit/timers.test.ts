@@ -7,7 +7,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createChromeShim, installChromeShim } from '../shim/chrome.ts';
-import { ALARM } from '../../src/shared/constants.ts';
+import {
+  ALARM,
+  AUTHOR_SYNC_MS,
+  MAX_TICK_MINUTES,
+  OVERLAP_MS,
+  assertCadenceInvariant,
+} from '../../src/shared/constants.ts';
 
 test('alarm fires at expected cadence and reschedules', async () => {
   const shim = createChromeShim();
@@ -45,5 +51,34 @@ test('updating tick period replaces the alarm with new cadence', async () => {
   } finally {
     off();
   }
+});
+
+test('REGRESSION HIGH: cadence invariant is actually enforced (mutation M2)', () => {
+  // The shipped constants must satisfy OVERLAP_MS >= AUTHOR_SYNC_MS +
+  // MAX_TICK_MINUTES*60s. A silent violation would re-introduce the
+  // "reply on a freshly-authored comment ages out before author-sync
+  // discovers the parent" miss path. Mutating any of the three constants
+  // to an illegal combination must trip the invariant.
+  assert.doesNotThrow(
+    () => assertCadenceInvariant(OVERLAP_MS, AUTHOR_SYNC_MS, MAX_TICK_MINUTES),
+    'shipped constants must satisfy the invariant',
+  );
+  // Legal edge: overlap exactly equals required — must pass.
+  assert.doesNotThrow(
+    () => assertCadenceInvariant(10 * 60_000 + 5 * 60_000, 10 * 60_000, 5),
+    'overlap = authorSync + tick × 60s exactly is legal',
+  );
+  // Illegal: overlap one millisecond short.
+  assert.throws(
+    () => assertCadenceInvariant(10 * 60_000 + 5 * 60_000 - 1, 10 * 60_000, 5),
+    /cadence invariant violated/,
+    '1ms under the requirement must throw',
+  );
+  // Illegal: zero overlap.
+  assert.throws(
+    () => assertCadenceInvariant(0, AUTHOR_SYNC_MS, MAX_TICK_MINUTES),
+    /cadence invariant violated/,
+    'zero overlap must throw',
+  );
 });
 

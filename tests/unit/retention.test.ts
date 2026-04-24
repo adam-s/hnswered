@@ -35,6 +35,27 @@ test('pruneReplies drops read replies older than retention, keeps unread', async
   } finally { off(); }
 });
 
+test('pruneReplies retention comparison is strict-greater — a read reply AT the boundary is kept', async () => {
+  // Mutation M7: `>` vs `>=` on the retention age check. The contract is
+  // "older than retention" — a reply exactly `retentionDays` old is NOT yet
+  // older-than, so it must be kept. Two replies straddling the boundary
+  // give an unambiguous discriminator: `at` kept, `past` dropped.
+  const shim = createChromeShim();
+  const off = installChromeShim(shim);
+  try {
+    const store = createStore(shim.storage.local);
+    const now = 100 * DAY_MS;
+    const retention = 30 * DAY_MS;
+    await store.addReplies([
+      mkReply({ id: 1, read: true, discoveredAt: now - retention }),     // AT boundary → keep
+      mkReply({ id: 2, read: true, discoveredAt: now - retention - 1 }), // 1ms past → drop
+    ]);
+    const dropped = await store.pruneReplies({ readOlderThanMs: retention, now });
+    assert.equal(dropped, 1, 'only the 1ms-past-boundary reply drops');
+    assert.deepEqual(Object.keys(await store.getReplies()).sort(), ['1']);
+  } finally { off(); }
+});
+
 test('pruneReplies drops orphaned READ replies but preserves orphaned UNREAD replies', async () => {
   // Orphan prune drops read replies only — unread replies survive even when their
   // parent is no longer monitored. Preserves the "unread is never auto-evicted"
@@ -122,6 +143,12 @@ test('clearPerUserState wipes replies + monitored + poll/sync timestamps but kee
     await store.addReplies([mkReply({ id: 1, parentItemId: 10 })]);
     await store.setTimestamp('lastAuthorSync', Date.now());
     await store.setTimestamp('lastCommentPoll', Date.now());
+    await store.setTimestamp('lastBackfillSweepAt', Date.now());
+    await store.setTimestamp('backfillSweepFloor', Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Seed a backfillQueue referencing the PRIOR user's parent IDs. If
+    // clearPerUserState does not wipe this, the next drain after a user
+    // switch will fetch replies for the wrong user's items (mutation M8).
+    await store.setBackfillQueue([10, 11, 12]);
 
     await store.clearPerUserState();
 
@@ -130,6 +157,11 @@ test('clearPerUserState wipes replies + monitored + poll/sync timestamps but kee
     const ts = await store.getTimestamps();
     assert.equal(ts.lastAuthorSync, 0);
     assert.equal(ts.lastCommentPoll, 0);
+    assert.equal(ts.lastBackfillSweepAt, 0);
+    assert.equal(ts.backfillSweepFloor, 0);
+    // Backfill queue must be wiped — stale parent IDs would otherwise poison
+    // the next drain after a user switch.
+    assert.deepEqual(await store.getBackfillQueue(), []);
     // Config untouched
     const cfg = await store.getConfig();
     assert.equal(cfg.hnUser, 'alice');

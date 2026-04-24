@@ -52,6 +52,26 @@ export const OVERLAP_MS = 45 * 60 * 1000;
 // holds. Settings.svelte intervals list must stay ≤ this.
 export const MAX_TICK_MINUTES = Math.floor((OVERLAP_MS - AUTHOR_SYNC_MS) / 60_000);
 
+// Exported as a pure function so unit tests can exercise it directly AND so
+// the module-load self-check below traps illegal edits to any of the three
+// constants. A silently-violated cadence invariant produces missed-reply
+// paths that would otherwise escape all tests (mutation M2).
+export function assertCadenceInvariant(
+  overlapMs: number,
+  authorSyncMs: number,
+  maxTickMinutes: number,
+): void {
+  const requiredMs = authorSyncMs + maxTickMinutes * 60_000;
+  if (overlapMs < requiredMs) {
+    throw new Error(
+      `cadence invariant violated: OVERLAP_MS=${overlapMs} must be >= ` +
+      `AUTHOR_SYNC_MS=${authorSyncMs} + MAX_TICK_MINUTES=${maxTickMinutes}min ` +
+      `(required >= ${requiredMs})`,
+    );
+  }
+}
+assertCadenceInvariant(OVERLAP_MS, AUTHOR_SYNC_MS, MAX_TICK_MINUTES);
+
 export const FETCH = {
   MAX_RETRIES: 3,
   BACKOFF_BASE_MS: 500,
