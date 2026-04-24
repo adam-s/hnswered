@@ -6534,12 +6534,20 @@ function timeAgo(ts, now = Date.now()) {
 }
 
 const ALLOWED_TAGS = /* @__PURE__ */ new Set(["A", "I", "B", "P", "PRE", "CODE", "BR", "EM", "STRONG"]);
+const DROP_TREE_TAGS = /* @__PURE__ */ new Set([
+  "SCRIPT",
+  "STYLE",
+  "NOSCRIPT",
+  "NOEMBED",
+  "TEMPLATE",
+  "IFRAME",
+  "OBJECT",
+  "EMBED"
+]);
 function safeHref(raw) {
   if (!raw) return null;
   const trimmed = raw.trim();
   if (/^https?:/i.test(trimmed)) return trimmed;
-  if (/^\/\//.test(trimmed)) return "https:" + trimmed;
-  if (/^\//.test(trimmed)) return trimmed;
   return null;
 }
 function clone(src, parent, doc) {
@@ -6550,6 +6558,7 @@ function clone(src, parent, doc) {
   if (src.nodeType !== Node.ELEMENT_NODE) return;
   const el = src;
   const tag = el.tagName.toUpperCase();
+  if (DROP_TREE_TAGS.has(tag)) return;
   if (!ALLOWED_TAGS.has(tag)) {
     for (const child of Array.from(el.childNodes)) clone(child, parent, doc);
     return;
@@ -7532,4 +7541,4 @@ delegate(['click']);
 const target = document.getElementById("app");
 if (!target) throw new Error("#app not found");
 mount(App, { target });
-//# sourceMappingURL=sidepanel-bbx9mjBV.js.map
+//# sourceMappingURL=sidepanel-CkcAIEav.js.map

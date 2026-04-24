@@ -6,15 +6,24 @@
  */
 
 const ALLOWED_TAGS = new Set(['A', 'I', 'B', 'P', 'PRE', 'CODE', 'BR', 'EM', 'STRONG']);
+// Drop entirely (tag + all descendants) — otherwise their text content would
+// leak into rendered output via the unwrap-and-preserve-text fallback.
+const DROP_TREE_TAGS = new Set([
+  'SCRIPT',
+  'STYLE',
+  'NOSCRIPT',
+  'NOEMBED',
+  'TEMPLATE',
+  'IFRAME',
+  'OBJECT',
+  'EMBED',
+]);
 
 function safeHref(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
-  // Allow only http(s), explicit relative, or protocol-less URLs.
   if (/^https?:/i.test(trimmed)) return trimmed;
-  if (/^\/\//.test(trimmed)) return 'https:' + trimmed;
-  if (/^\//.test(trimmed)) return trimmed;
-  return null; // drop javascript:, data:, vbscript:, etc.
+  return null;
 }
 
 function clone(src: Node, parent: Node, doc: Document) {
@@ -25,8 +34,8 @@ function clone(src: Node, parent: Node, doc: Document) {
   if (src.nodeType !== Node.ELEMENT_NODE) return;
   const el = src as Element;
   const tag = el.tagName.toUpperCase();
+  if (DROP_TREE_TAGS.has(tag)) return;
   if (!ALLOWED_TAGS.has(tag)) {
-    // Drop the wrapper but preserve its text children (HN wraps paragraphs in <p>).
     for (const child of Array.from(el.childNodes)) clone(child, parent, doc);
     return;
   }

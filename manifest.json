@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "description": "Notifies you when someone replies to your Hacker News posts and comments.",
   "permissions": ["storage", "alarms", "sidePanel"],
-  "host_permissions": ["https://hacker-news.firebaseio.com/*"],
+  "host_permissions": ["https://hacker-news.firebaseio.com/*", "https://hn.algolia.com/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

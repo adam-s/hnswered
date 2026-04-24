@@ -37,6 +37,10 @@ The repo ships a pre-built `dist/`. No Node or build step is required.
 
 ![Five steps to install HNswered: 1. Open chrome://extensions and enable Developer mode. 2. Click "Load unpacked" in the new toolbar. 3. Choose the repository's dist folder, produced by pnpm build. 4. Open the extensions menu and pin HNswered to the toolbar. 5. Enter your Hacker News username — watching starts immediately.](docs/install.png)
 
+## Security
+
+A self-contained security audit prompt is available at [docs/security-audit.md](docs/security-audit.md).
+
 ## For Contributors
 
 Build from source (only needed if you change code — the repo ships a pre-built `dist/`):

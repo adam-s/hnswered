@@ -23,6 +23,7 @@
     "@types/chrome": "^0.0.287",
     "@types/node": "^22.10.0",
     "@types/sinonjs__fake-timers": "^8.1.5",
+    "happy-dom": "^20.9.0",
     "svelte": "^5.16.0",
     "svelte-check": "^4.1.1",
     "typescript": "^5.7.2",
