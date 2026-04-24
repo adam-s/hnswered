@@ -1,12 +1,10 @@
 import { A as ALGOLIA_HITS_PER_PAGE, F as FETCH, a as ALGOLIA_API, D as DEFAULT_CONFIG, B as BACKFILL_DAY_OPTIONS, M as MAX_TICK_MINUTES, b as DAY_MS, c as AUTHOR_SYNC_MS, O as OVERLAP_MS, d as DROP_AGE_MS, R as RETENTION, e as ALARM, L as LOCK } from './assets/constants-BRcisosw.js';
 
 function log(loc, msg, data) {
-  const tail = "";
-  console.log(`${(/* @__PURE__ */ new Date()).toISOString()} [${loc}] ${msg}${tail}`);
+  return;
 }
 function logErr(loc, msg, err) {
-  const text = err instanceof Error ? err.message : String(err);
-  console.error(`${(/* @__PURE__ */ new Date()).toISOString()} [${loc}] ERR ${msg} err=${JSON.stringify(text)}`);
+  return;
 }
 
 const sleep$1 = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -14,7 +12,6 @@ async function fetchJSON(url, attempt = 0) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH.TIMEOUT_MS);
   const t0 = Date.now();
-  log("algolia-client.fetchJSON", `GET attempt=${attempt} url=${url}`);
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
@@ -24,14 +21,12 @@ async function fetchJSON(url, attempt = 0) {
     return body;
   } catch (err) {
     if (attempt >= FETCH.MAX_RETRIES) {
-      logErr("algolia-client.fetchJSON", `EXHAUSTED url=${url}`, err);
       throw err;
     }
     const backoff = Math.min(
       FETCH.BACKOFF_BASE_MS * 2 ** attempt,
       FETCH.BACKOFF_MAX_MS
     );
-    log("algolia-client.fetchJSON", `retry attempt=${attempt} backoffMs=${backoff} url=${url}`);
     await sleep$1(backoff);
     return fetchJSON(url, attempt + 1);
   } finally {
@@ -59,9 +54,6 @@ const algoliaClient = {
         if (data.hits.length < ALGOLIA_HITS_PER_PAGE) break;
         page++;
         if (page < MAX_PAGES) await sleep$1(500);
-      }
-      if (page >= MAX_PAGES - 1) {
-        log("algolia-client.searchByAuthor", `MAX_PAGES=${MAX_PAGES} reached user=${user} kind=${kind} — possible truncation`);
       }
       return out;
     }
@@ -310,7 +302,6 @@ function ageMs(item, now = nowMs()) {
 async function pollComments(client, store) {
   const config = await store.getConfig();
   if (!config.hnUser) {
-    log("poller.pollComments", `skip reason=no-user`);
     return { newReplies: 0, skipped: true, reason: "no-user" };
   }
   const hnUserLc = config.hnUser.toLowerCase();
@@ -363,7 +354,6 @@ async function pollComments(client, store) {
 async function syncAuthor(client, store) {
   const config = await store.getConfig();
   if (!config.hnUser) {
-    log("poller.syncAuthor", `skip reason=no-user`);
     return 0;
   }
   const { lastAuthorSync } = await store.getTimestamps();
@@ -405,13 +395,12 @@ async function syncAuthor(client, store) {
     await store.removeMonitored(toDrop);
   }
   const retentionDays = Math.max(1, Number(config.retentionDays) || 30);
-  const dropped = await store.pruneReplies({
+  await store.pruneReplies({
     readOlderThanMs: retentionDays * DAY_MS,
     hardCap: RETENTION.HARD_REPLY_CAP,
     orphanedIfMonitoredMissing: true,
     now
   });
-  if (dropped > 0) log("poller.syncAuthor", `pruned ${dropped} replies retentionDays=${retentionDays}`);
   await store.setTimestamp("lastAuthorSync", now);
   log("poller.syncAuthor", `EXIT added=${added} skippedOld=${skippedOld} skippedExisting=${skippedExisting} dropped=${toDrop.length}`);
   return added;
@@ -499,7 +488,6 @@ async function drainOneBackfillItem(client, store, now = nowMs(), monitoredCache
   const { lastBackfillSweepAt, backfillSweepFloor } = await store.getTimestamps();
   if (!parent) {
     await store.setBackfillQueue(rest);
-    log("poller.drainOneBackfillItem", `parent=${head} evicted — dropped from queue`);
     if (rest.length === 0) {
       await store.setTimestamp("lastBackfillSweepAt", now);
       await store.setTimestamp("backfillSweepFloor", 0);
@@ -567,7 +555,6 @@ async function drainBackfillQueueCompletely(client, store) {
     itemsProcessed++;
     repliesSurfaced += inserted;
     if (itemsProcessed > 5e3) {
-      log("poller.BACKFILL.drainAll.abort", `itemsProcessed=${itemsProcessed} — aborting runaway drain`);
       break;
     }
     const queueAfter = await store.getBackfillQueue();
@@ -583,11 +570,6 @@ async function drainBackfillQueueCompletely(client, store) {
       `lastBackfillSweepAt rewound to drain-start=${new Date(started).toISOString()} (not drain-end) so post-drain pollComments can recover missed replies`
     );
   }
-  const durationMs = nowMs() - started;
-  log(
-    "poller.BACKFILL.drainAll.done",
-    `itemsProcessed=${itemsProcessed} repliesSurfaced=${repliesSurfaced} durationMs=${durationMs}`
-  );
   return { itemsProcessed, repliesSurfaced };
 }
 
@@ -604,7 +586,6 @@ const store = createStore();
 async function refreshBadge() {
   const n = await store.getUnreadCount();
   await updateBadge(n);
-  log("index.refreshBadge", `unread=${n}`);
 }
 async function ensureAlarms() {
   const config = await store.getConfig();
@@ -642,7 +623,6 @@ async function runTick() {
   const lockRequestedAt = Date.now();
   await navigator.locks.request(LOCK.TICK, { ifAvailable: true }, async (lock) => {
     if (lock === null) {
-      log("index.runTick", `coalesced — lock held by peer, skipping redundant tick`);
       return;
     }
     const lockGrantedAt = Date.now();
@@ -665,31 +645,16 @@ async function runTick() {
       await pollComments(algoliaClient, store);
       await drainOneBackfillItem(algoliaClient, store, tickNow);
     } catch (err) {
-      logErr("index.runTick", `failed`, err);
       console.error("[HNswered] tick failed:", err);
     } finally {
       await refreshBadge();
-      {
-        const [postTs, postQueue, postReplies] = await Promise.all([
-          store.getTimestamps(),
-          store.getBackfillQueue(),
-          store.getReplies()
-        ]);
-        const durationMs = Date.now() - lockGrantedAt;
-        log(
-          "index.runTick",
-          `STATE=exit durationMs=${durationMs} queueLen=${postQueue.length} repliesTotal=${Object.keys(postReplies).length} ts=${JSON.stringify({ lastCommentPoll: postTs.lastCommentPoll, lastBackfillSweepAt: postTs.lastBackfillSweepAt, backfillSweepFloor: postTs.backfillSweepFloor })}`
-        );
-      }
     }
   });
 }
 async function runRefresh(fullDrain = false) {
-  log("index.runRefresh", `ENTER`);
   const now = Date.now();
   const sinceLastMs = now - lastForceRefreshAt;
   if (sinceLastMs < MIN_REFRESH_INTERVAL_MS) {
-    log("index.runRefresh", `THROTTLED sinceLastMs=${sinceLastMs} min=${MIN_REFRESH_INTERVAL_MS} — draining any in-flight tick`);
     await navigator.locks.request(LOCK.TICK, () => {
     });
     return;
@@ -717,21 +682,17 @@ async function runRefresh(fullDrain = false) {
         await drainOneBackfillItem(algoliaClient, store, refreshNow);
       }
     } catch (err) {
-      logErr("index.runRefresh", `failed`, err);
       console.error("[HNswered] refresh failed:", err);
     } finally {
       await refreshBadge();
-      log("index.runRefresh", `EXIT`);
     }
   });
 }
 chrome.runtime.onInstalled.addListener(async () => {
-  log("index.onInstalled", `fired`);
   await ensureAlarms();
   await refreshBadge();
 });
 chrome.runtime.onStartup.addListener(async () => {
-  log("index.onStartup", `fired`);
   await ensureAlarms();
   await refreshBadge();
 });
@@ -905,13 +866,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       }
     } catch (err) {
-      logErr("index.onMessage", `kind=${message.kind}`, err);
+      logErr("index.onMessage", `kind=${message.kind}`);
       respond({ ok: false, error: err.message });
     }
   })();
   return true;
 });
-log("index.boot", `loaded`);
 void ensureAlarms();
 void refreshBadge();
 globalThis.__hnswered = {
